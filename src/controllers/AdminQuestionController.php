@@ -9,18 +9,37 @@ class AdminQuestionController {
     public static function index(): void {
         $me = requireRole('admin');
         $cat = (int)($_GET['category_id'] ?? 0);
+        $q   = trim((string)($_GET['q'] ?? ''));
+        $perPage = 50;
+        $page = max(1, (int)($_GET['page'] ?? 1));
+
+        $where = []; $params = [];
+        if ($cat > 0) { $where[] = "q.category_id = ?"; $params[] = $cat; }
+        if ($q !== '') { $where[] = "q.prompt LIKE ?"; $params[] = '%' . $q . '%'; }
+        $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+
+        $cst = db()->prepare("SELECT COUNT(*) FROM questions q" . $whereSql);
+        $cst->execute($params);
+        $total = (int)$cst->fetchColumn();
+        $totalPages = max(1, (int)ceil($total / $perPage));
+        if ($page > $totalPages) $page = $totalPages;
+        $offset = ($page - 1) * $perPage;
+
         $sql = "SELECT q.*, c.name AS category_name,
                   (SELECT COUNT(*) FROM question_options o WHERE o.question_id=q.id) AS option_count,
                   (SELECT COALESCE(SUM(o.score), 0) FROM question_options o WHERE o.question_id=q.id) AS total_score
                 FROM questions q
-                JOIN categories c ON c.id=q.category_id";
-        $params = [];
-        if ($cat > 0) { $sql .= " WHERE q.category_id=?"; $params[] = $cat; }
-        $sql .= " ORDER BY q.id DESC LIMIT 500";
+                JOIN categories c ON c.id=q.category_id"
+              . $whereSql
+              . " ORDER BY q.id DESC LIMIT $perPage OFFSET $offset";
         $st = db()->prepare($sql); $st->execute($params);
         $items = $st->fetchAll();
         $cats = db()->query("SELECT id, name FROM categories ORDER BY name")->fetchAll();
-        view('admin/questions/index', ['title' => 'Sorular', 'me' => $me, 'items' => $items, 'cats' => $cats, 'selectedCat' => $cat]);
+        view('admin/questions/index', [
+            'title' => 'Sorular', 'me' => $me, 'items' => $items, 'cats' => $cats,
+            'selectedCat' => $cat, 'q' => $q,
+            'page' => $page, 'totalPages' => $totalPages, 'total' => $total,
+        ]);
     }
 
     public static function createForm(): void {
