@@ -8,8 +8,7 @@
     <div class="finish-tag">Cevapların kaydedildi</div>
     <h2 class="finish-title"><?= e($test['title']) ?></h2>
     <p class="finish-message">
-      Testi tamamlamak için <strong>öğretmenine danış</strong>.<br>
-      Öğretmenin değerlendirmeyi yaptıktan sonra sonucun görünür olacak.
+      <strong>Test tamamlanmıştır, teşekkür ederiz.</strong>
     </p>
     <div class="finish-actions">
       <a href="/student" class="btn btn-primary btn-finish-cta">

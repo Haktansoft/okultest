@@ -110,8 +110,8 @@ $r->get ('/teacher', function () {
 $r->get ('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'index']);
 $r->get ('/teacher/students/new',            ['App\\Controllers\\TeacherStudentController', 'createForm']);
 $r->post('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'create']);
-$r->post('/teacher/students/{id}/reset',     ['App\\Controllers\\TeacherStudentController', 'reset']);
-$r->post('/teacher/students/{id}/rename',    ['App\\Controllers\\TeacherStudentController', 'rename']);
+$r->get ('/teacher/students/{id}/edit',      ['App\\Controllers\\TeacherStudentController', 'editForm']);
+$r->post('/teacher/students/{id}/update',    ['App\\Controllers\\TeacherStudentController', 'update']);
 $r->post('/teacher/students/{id}/toggle',    ['App\\Controllers\\TeacherStudentController', 'toggle']);
 
 $r->get ('/teacher/assignments',             ['App\\Controllers\\TeacherAssignmentController', 'index']);

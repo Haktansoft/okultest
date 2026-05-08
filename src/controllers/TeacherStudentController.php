@@ -14,43 +14,87 @@ class TeacherStudentController {
 
     public static function createForm(): void {
         $me = requireRole('teacher', 'admin');
-        view('teacher/students/form', ['title' => 'Yeni Öğrenci', 'me' => $me]);
+        view('teacher/students/form', ['title' => 'Yeni Öğrenci', 'me' => $me, 'item' => null]);
     }
 
     public static function create(): void {
         $me = requireRole('teacher', 'admin');
-        $name = trim((string)($_POST['full_name'] ?? ''));
-        $pass = trim((string)($_POST['password'] ?? ''));
-        if ($name === '' || strlen($pass) < 4) {
-            flash('err', 'Ad-soyad ve şifre (en az 4 karakter) gerekli.');
+        $name  = trim((string)($_POST['full_name'] ?? ''));
+        $tc    = self::cleanTc($_POST['tc'] ?? '');
+        $grade = trim((string)($_POST['grade_level'] ?? ''));
+        $sect  = trim((string)($_POST['section'] ?? ''));
+
+        $err = self::validateBasics($name, $tc);
+        if ($err) { flash('err', $err); redirect('/teacher/students/new'); }
+
+        if (self::tcExists($tc)) {
+            flash('err', 'Bu T.C. numarası başka bir kullanıcıda kayıtlı.');
             redirect('/teacher/students/new');
         }
-        if (self::passwordExists($pass)) {
-            flash('err', 'Bu şifre başka bir kullanıcıda kayıtlı. Farklı bir şifre gir.');
+        if (self::passwordExists($tc)) {
+            flash('err', 'Bu T.C. numarası başka bir kullanıcının şifresi olarak kullanılıyor.');
             redirect('/teacher/students/new');
         }
+
         try {
-            $st = db()->prepare("INSERT INTO users (role, full_name, password, is_active, created_by) VALUES ('student', ?, ?, 1, ?)");
-            $st->execute([$name, $pass, $me['id']]);
+            $st = db()->prepare("
+                INSERT INTO users (role, full_name, tc, grade_level, section, password, is_active, created_by)
+                VALUES ('student', ?, ?, ?, ?, ?, 1, ?)
+            ");
+            $st->execute([$name, $tc, $grade !== '' ? $grade : null, $sect !== '' ? $sect : null, $tc, $me['id']]);
         } catch (\PDOException $ex) {
-            flash('err', 'Kayıt yapılamadı (şifre zaten kullanılıyor olabilir).');
+            flash('err', 'Kayıt yapılamadı (T.C. veya şifre çakışması olabilir).');
             redirect('/teacher/students/new');
         }
-        flash('ok', 'Öğrenci eklendi.');
+        flash('ok', 'Öğrenci eklendi. Giriş şifresi: T.C. numarası.');
         redirect('/teacher/students');
     }
 
-    public static function reset(string $id): void {
+    public static function editForm(string $id): void {
+        $me = requireRole('teacher', 'admin');
+        $st = db()->prepare("SELECT * FROM users WHERE id=? AND role='student'");
+        $st->execute([$id]);
+        $item = $st->fetch();
+        if (!$item) { flash('err', 'Öğrenci bulunamadı.'); redirect('/teacher/students'); }
+        view('teacher/students/form', ['title' => 'Öğrenciyi Düzenle', 'me' => $me, 'item' => $item]);
+    }
+
+    public static function update(string $id): void {
         requireRole('teacher', 'admin');
-        $pass = trim((string)($_POST['password'] ?? ''));
-        if (strlen($pass) < 4) { flash('err', 'Şifre en az 4 karakter.'); redirect('/teacher/students'); }
-        if (self::passwordExists($pass, (int)$id)) {
-            flash('err', 'Bu şifre başka bir kullanıcıda var.');
-            redirect('/teacher/students');
+        $name  = trim((string)($_POST['full_name'] ?? ''));
+        $tc    = self::cleanTc($_POST['tc'] ?? '');
+        $grade = trim((string)($_POST['grade_level'] ?? ''));
+        $sect  = trim((string)($_POST['section'] ?? ''));
+
+        $err = self::validateBasics($name, $tc);
+        if ($err) { flash('err', $err); redirect("/teacher/students/$id/edit"); }
+
+        if (self::tcExists($tc, (int)$id)) {
+            flash('err', 'Bu T.C. numarası başka bir kullanıcıda kayıtlı.');
+            redirect("/teacher/students/$id/edit");
         }
-        db()->prepare("UPDATE users SET password=? WHERE id=? AND role='student'")
-            ->execute([$pass, $id]);
-        flash('ok', 'Şifre güncellendi.');
+        if (self::passwordExists($tc, (int)$id)) {
+            flash('err', 'Bu T.C. numarası başka bir kullanıcının şifresi olarak kullanılıyor.');
+            redirect("/teacher/students/$id/edit");
+        }
+
+        try {
+            $st = db()->prepare("
+                UPDATE users
+                   SET full_name=?, tc=?, grade_level=?, section=?, password=?
+                 WHERE id=? AND role='student'
+            ");
+            $st->execute([
+                $name, $tc,
+                $grade !== '' ? $grade : null,
+                $sect !== '' ? $sect : null,
+                $tc, $id,
+            ]);
+        } catch (\PDOException $ex) {
+            flash('err', 'Güncelleme yapılamadı (çakışma olabilir).');
+            redirect("/teacher/students/$id/edit");
+        }
+        flash('ok', 'Öğrenci güncellendi.');
         redirect('/teacher/students');
     }
 
@@ -61,21 +105,27 @@ class TeacherStudentController {
         redirect('/teacher/students');
     }
 
-    public static function rename(string $id): void {
-        requireRole('teacher', 'admin');
-        $name = trim((string)($_POST['full_name'] ?? ''));
-        if ($name === '') {
-            flash('err', 'Ad-soyad boş olamaz.');
-            redirect('/teacher/students');
-        }
-        $st = db()->prepare("UPDATE users SET full_name=? WHERE id=? AND role='student'");
-        $st->execute([$name, $id]);
-        flash('ok', $st->rowCount() ? 'Ad-soyad güncellendi.' : 'Değişiklik yapılmadı.');
-        redirect('/teacher/students');
+    // -------- Helpers --------
+
+    private static function cleanTc($raw): string {
+        return preg_replace('/\D+/', '', (string)$raw);
+    }
+
+    private static function validateBasics(string $name, string $tc): ?string {
+        if ($name === '') return 'Ad-soyad gerekli.';
+        if (strlen($tc) !== 11) return 'T.C. numarası 11 haneli olmalı.';
+        if ($tc[0] === '0') return 'T.C. numarası 0 ile başlayamaz.';
+        return null;
+    }
+
+    private static function tcExists(string $tc, int $excludeId = 0): bool {
+        $st = db()->prepare("SELECT id FROM users WHERE tc=? AND id<>? LIMIT 1");
+        $st->execute([$tc, $excludeId]);
+        return (bool)$st->fetchColumn();
     }
 
     private static function passwordExists(string $pass, int $excludeId = 0): bool {
-        $st = db()->prepare("SELECT id FROM users WHERE password = ? AND id <> ? LIMIT 1");
+        $st = db()->prepare("SELECT id FROM users WHERE password=? AND id<>? LIMIT 1");
         $st->execute([$pass, $excludeId]);
         return (bool)$st->fetchColumn();
     }
