@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# Var olan dosya/dizinler doğrudan servis edilsin
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Diğer her şey index.php'ye
+RewriteRule ^ index.php [L]
+
+# Bazı dosyaları doğrudan engelle
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>

@@ -1,0 +1,22 @@
+RewriteEngine On
+
+# Var olan dosya/dizinler doğrudan servis edilsin
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Diğer her şey index.php'ye
+RewriteRule ^ index.php [L]
+
+# .env, .git vb. gizli dosyaları engelle
+<FilesMatch "^\.(?!well-known)">
+  Require all denied
+</FilesMatch>
+
+# Büyük yüklemeler için (paylaşımlı hosting izin veriyorsa)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 512M
+  php_value post_max_size 512M
+  php_value memory_limit 256M
+  php_value max_execution_time 300
+</IfModule>
