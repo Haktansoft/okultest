@@ -8,12 +8,8 @@ use function App\{db, e, flash, redirect, requireRole, view};
 class TeacherStudentController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
-        $campusId = self::myCampusId($me);
-        if (!$campusId && $me['role'] !== 'admin') {
-            flash('err', 'Yöneticiniz size kampüs atamadan öğrenci yönetemezsiniz.');
-            redirect('/teacher');
-        }
-        if ($me['role'] === 'admin' && !$campusId) {
+        $isAdmin = $me['role'] === 'admin';
+        if ($isAdmin) {
             $items = db()->query("
                 SELECT u.*, cr.name AS classroom_name, c.name AS campus_name, i.name AS institution_name
                   FROM users u
@@ -24,15 +20,20 @@ class TeacherStudentController {
               ORDER BY i.name, c.name, cr.name, u.full_name
             ")->fetchAll();
         } else {
-            $st = db()->prepare("
-                SELECT u.*, cr.name AS classroom_name
-                  FROM users u
-             LEFT JOIN classrooms cr ON cr.id = u.classroom_id
-                 WHERE u.role='student' AND u.campus_id = ?
-              ORDER BY cr.name, u.full_name
-            ");
-            $st->execute([$campusId]);
-            $items = $st->fetchAll();
+            $crIds = self::myClassroomIds((int)$me['id']);
+            if (!$crIds) { $items = []; }
+            else {
+                $place = implode(',', array_fill(0, count($crIds), '?'));
+                $st = db()->prepare("
+                    SELECT u.*, cr.name AS classroom_name
+                      FROM users u
+                 LEFT JOIN classrooms cr ON cr.id = u.classroom_id
+                     WHERE u.role='student' AND u.classroom_id IN ($place)
+                  ORDER BY cr.name, u.full_name
+                ");
+                $st->execute($crIds);
+                $items = $st->fetchAll();
+            }
         }
         view('teacher/students/index', ['title' => 'Öğrenciler', 'me' => $me, 'items' => $items]);
     }
@@ -41,24 +42,24 @@ class TeacherStudentController {
         $me = requireRole('teacher', 'admin');
         $isAdmin = $me['role'] === 'admin';
         if ($isAdmin) {
-            $teachers = self::teachersWithCampus();
+            $teachers = self::teachersWithClassrooms();
             if (!$teachers) {
-                flash('err', 'Önce en az bir öğretmen oluştur (kampüs atamalı).');
-                redirect('/admin/teachers/new');
+                flash('err', 'Önce en az bir öğretmen oluştur ve sınıf ataması yap.');
+                redirect('/admin/teachers');
             }
-            $classroomsByCampus = self::allClassroomsByCampus();
+            $classroomsByTeacher = self::allClassroomsByTeacher();
             view('teacher/students/form', [
                 'title' => 'Yeni Öğrenci', 'me' => $me, 'item' => null,
-                'classrooms' => [], 'teachers' => $teachers, 'classroomsByCampus' => $classroomsByCampus,
+                'classrooms' => [], 'teachers' => $teachers, 'classroomsByTeacher' => $classroomsByTeacher,
             ]);
             return;
         }
-        $campusId = self::myCampusId($me);
-        if (!$campusId) {
-            flash('err', 'Önce sana bir kampüs atanmalı.');
+        $crIds = self::myClassroomIds((int)$me['id']);
+        if (!$crIds) {
+            flash('err', 'Sana atanmış bir sınıf yok. Yöneticiyle iletişime geç.');
             redirect('/teacher/students');
         }
-        $classrooms = self::classroomsForCampus($campusId);
+        $classrooms = self::classroomsByIds($crIds);
         view('teacher/students/form', ['title' => 'Yeni Öğrenci', 'me' => $me, 'item' => null, 'classrooms' => $classrooms]);
     }
 
@@ -70,7 +71,7 @@ class TeacherStudentController {
         $tc   = self::cleanTc($_POST['tc'] ?? '');
         $crId = (int)($_POST['classroom_id'] ?? 0);
 
-        // Admin: hangi öğretmene → o öğretmenin kampüsü kullanılır
+        // Admin: hangi öğretmene → o öğretmenin kampüsü ve atanmış sınıfından seç
         if ($isAdmin) {
             $teacherId = (int)($_POST['teacher_id'] ?? 0);
             $teacher = self::loadActiveTeacher($teacherId);
@@ -79,19 +80,21 @@ class TeacherStudentController {
                 redirect('/teacher/students/new');
             }
             $campusId = (int)$teacher['campus_id'];
-            $creatorId = $teacherId; // öğrenciyi ait olduğu öğretmen oluşturmuş gibi davran
+            $creatorId = $teacherId;
             $teacherForAssign = $teacherId;
+            // Sınıf öğretmenin atanmış sınıfı olmalı
+            $okClass = self::teacherHasClassroom($teacherId, $crId);
         } else {
-            $campusId = self::myCampusId($me);
-            if (!$campusId) { flash('err', 'Kampüs yok.'); redirect('/teacher/students'); }
+            $campusId = (int)$me['campus_id'];
             $creatorId = (int)$me['id'];
             $teacherForAssign = (int)$me['id'];
+            $okClass = self::teacherHasClassroom((int)$me['id'], $crId);
         }
 
         $err = self::validateBasics($name, $tc);
         if ($err) { flash('err', $err); redirect('/teacher/students/new'); }
-        if ($crId <= 0 || !self::classroomBelongsToCampus($crId, $campusId)) {
-            flash('err', 'Sınıf seçilen öğretmenin kampüsüne ait olmalı.');
+        if ($crId <= 0 || !$okClass) {
+            flash('err', 'Geçerli bir sınıf seç (öğretmenin atanmış sınıfı olmalı).');
             redirect('/teacher/students/new');
         }
         if (self::tcExists($tc)) {
@@ -128,7 +131,11 @@ class TeacherStudentController {
         $item = self::loadOwned((int)$id, $me);
         if (!$item) { flash('err', 'Öğrenci bulunamadı.'); redirect('/teacher/students'); }
         $campusId = (int)$item['campus_id'];
-        $classrooms = self::classroomsForCampus($campusId);
+        if ($me['role'] === 'admin') {
+            $classrooms = self::classroomsForCampus($campusId);
+        } else {
+            $classrooms = self::classroomsByIds(self::myClassroomIds((int)$me['id']));
+        }
         view('teacher/students/form', ['title' => 'Öğrenciyi Düzenle', 'me' => $me, 'item' => $item, 'classrooms' => $classrooms]);
     }
 
@@ -144,7 +151,10 @@ class TeacherStudentController {
 
         $err = self::validateBasics($name, $tc);
         if ($err) { flash('err', $err); redirect("/teacher/students/$id/edit"); }
-        if ($crId <= 0 || !self::classroomBelongsToCampus($crId, $campusId)) {
+        $okClass = $me['role'] === 'admin'
+            ? self::classroomBelongsToCampus($crId, $campusId)
+            : self::teacherHasClassroom((int)$me['id'], $crId);
+        if ($crId <= 0 || !$okClass) {
             flash('err', 'Geçerli bir sınıf seç.');
             redirect("/teacher/students/$id/edit");
         }
@@ -204,33 +214,60 @@ class TeacherStudentController {
         $st->execute([$id]);
         $u = $st->fetch();
         if (!$u) return null;
-        if ($me['role'] !== 'admin' && (int)$u['campus_id'] !== self::myCampusId($me)) {
-            return null;
+        if ($me['role'] !== 'admin') {
+            $crIds = self::myClassroomIds((int)$me['id']);
+            if (!in_array((int)$u['classroom_id'], $crIds, true)) return null;
         }
         return $u;
     }
 
     private static function classroomsForCampus(int $campusId): array {
-        $st = db()->prepare("SELECT id, name FROM classrooms WHERE campus_id=? ORDER BY name");
+        $st = db()->prepare("SELECT id, name FROM classrooms WHERE campus_id=? ORDER BY grade_level, section, name");
         $st->execute([$campusId]);
         return $st->fetchAll();
     }
 
-    private static function teachersWithCampus(): array {
+    private static function classroomsByIds(array $ids): array {
+        if (!$ids) return [];
+        $place = implode(',', array_fill(0, count($ids), '?'));
+        $st = db()->prepare("SELECT id, name FROM classrooms WHERE id IN ($place) ORDER BY grade_level, section, name");
+        $st->execute($ids);
+        return $st->fetchAll();
+    }
+
+    public static function myClassroomIds(int $teacherId): array {
+        $st = db()->prepare("SELECT classroom_id FROM teacher_classrooms WHERE teacher_id=?");
+        $st->execute([$teacherId]);
+        return array_map('intval', array_column($st->fetchAll(), 'classroom_id'));
+    }
+
+    private static function teacherHasClassroom(int $teacherId, int $classroomId): bool {
+        $st = db()->prepare("SELECT 1 FROM teacher_classrooms WHERE teacher_id=? AND classroom_id=?");
+        $st->execute([$teacherId, $classroomId]);
+        return (bool)$st->fetchColumn();
+    }
+
+    private static function teachersWithClassrooms(): array {
         return db()->query("
-            SELECT u.id, u.full_name, u.campus_id, c.name AS campus_name, i.name AS institution_name
+            SELECT DISTINCT u.id, u.full_name, u.campus_id, c.name AS campus_name, i.name AS institution_name
               FROM users u
               JOIN campuses c ON c.id = u.campus_id
               JOIN institutions i ON i.id = c.institution_id
-             WHERE u.role='teacher' AND u.is_active=1 AND u.campus_id IS NOT NULL
+              JOIN teacher_classrooms tc ON tc.teacher_id = u.id
+             WHERE u.role='teacher' AND u.is_active=1
           ORDER BY i.name, c.name, u.full_name
         ")->fetchAll();
     }
 
-    private static function allClassroomsByCampus(): array {
-        $rows = db()->query("SELECT id, campus_id, name FROM classrooms ORDER BY name")->fetchAll();
+    private static function allClassroomsByTeacher(): array {
+        $rows = db()->query("
+            SELECT tc.teacher_id, cr.id, cr.name
+              FROM teacher_classrooms tc
+              JOIN classrooms cr ON cr.id = tc.classroom_id
+          ORDER BY cr.grade_level, cr.section, cr.name
+        ")->fetchAll();
         $map = [];
-        foreach ($rows as $r) $map[(int)$r['campus_id']][] = ['id' => (int)$r['id'], 'name' => $r['name']];
+        foreach ($rows as $r) $map[(int)$r['teacher_id']][] = ['id' => (int)$r['id'], 'name' => $r['name']];
         return $map;
     }
 

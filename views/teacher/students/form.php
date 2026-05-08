@@ -27,11 +27,11 @@
 
     <?php if (!$editing && $isAdmin): ?>
       <div class="mb-3">
-        <label class="form-label">Öğretmen <span class="muted tiny">(öğrencinin bağlanacağı öğretmen — kampüsü buradan belirlenir)</span></label>
+        <label class="form-label">Öğretmen <span class="muted tiny">(öğrencinin bağlanacağı öğretmen — sınıf seçenekleri öğretmenin atanmış sınıflarından gelir)</span></label>
         <select class="form-select" name="teacher_id" id="teacher-select" required>
           <option value="">— Öğretmen seç —</option>
           <?php foreach ($teachers as $t): ?>
-            <option value="<?= (int)$t['id'] ?>" data-campus="<?= (int)$t['campus_id'] ?>">
+            <option value="<?= (int)$t['id'] ?>">
               <?= e($t['full_name']) ?> — <?= e($t['institution_name']) ?> / <?= e($t['campus_name']) ?>
             </option>
           <?php endforeach; ?>
@@ -69,16 +69,15 @@
 <?php if (!$editing && $isAdmin): ?>
 <script>
 (() => {
-  const classroomsByCampus = <?= json_encode($classroomsByCampus ?? [], JSON_UNESCAPED_UNICODE) ?>;
+  const classroomsByTeacher = <?= json_encode($classroomsByTeacher ?? [], JSON_UNESCAPED_UNICODE) ?>;
   const teacherSel = document.getElementById('teacher-select');
   const classSel   = document.getElementById('classroom-select');
   teacherSel.addEventListener('change', () => {
-    const opt = teacherSel.options[teacherSel.selectedIndex];
-    const campusId = opt ? (opt.dataset.campus || 0) : 0;
+    const teacherId = teacherSel.value || 0;
     classSel.innerHTML = '';
-    const list = classroomsByCampus[campusId] || [];
+    const list = classroomsByTeacher[teacherId] || [];
     if (!list.length) {
-      classSel.innerHTML = '<option value="">— Bu kampüste sınıf yok —</option>';
+      classSel.innerHTML = '<option value="">— Bu öğretmene sınıf atanmamış —</option>';
       classSel.disabled = true;
       return;
     }

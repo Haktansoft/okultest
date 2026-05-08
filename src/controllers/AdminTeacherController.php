@@ -64,20 +64,59 @@ class AdminTeacherController {
         $item = $st->fetch();
         if (!$item) { flash('err', 'Öğretmen bulunamadı.'); redirect('/admin/teachers'); }
         $campuses = self::campusOptions();
-        view('admin/teachers/form', ['title' => 'Öğretmeni Düzenle', 'me' => $me, 'item' => $item, 'campuses' => $campuses]);
+
+        // Bu kampüsün sınıfları + öğretmenin atanmış olanları
+        $classrooms = [];
+        $assigned = [];
+        if (!empty($item['campus_id'])) {
+            $cs = db()->prepare("SELECT id, name, grade_level, section FROM classrooms WHERE campus_id=? ORDER BY grade_level, section, name");
+            $cs->execute([$item['campus_id']]);
+            $classrooms = $cs->fetchAll();
+            $as = db()->prepare("SELECT classroom_id FROM teacher_classrooms WHERE teacher_id=?");
+            $as->execute([$id]);
+            $assigned = array_map('intval', array_column($as->fetchAll(), 'classroom_id'));
+        }
+        view('admin/teachers/form', [
+            'title' => 'Öğretmeni Düzenle', 'me' => $me, 'item' => $item,
+            'campuses' => $campuses, 'classrooms' => $classrooms, 'assigned' => $assigned,
+        ]);
     }
 
     public static function update(string $id): void {
         requireRole('admin');
         $name = trim((string)($_POST['full_name'] ?? ''));
         $campusId = (int)($_POST['campus_id'] ?? 0);
+        $picks = array_map('intval', (array)($_POST['classroom_ids'] ?? []));
         if ($name === '') { flash('err', 'Ad-soyad gerekli.'); redirect("/admin/teachers/$id/edit"); }
         if ($campusId <= 0 || !self::campusExists($campusId)) {
             flash('err', 'Geçerli bir kampüs seç.');
             redirect("/admin/teachers/$id/edit");
         }
-        db()->prepare("UPDATE users SET full_name=?, campus_id=? WHERE id=? AND role='teacher'")
-            ->execute([$name, $campusId, $id]);
+
+        $pdo = db();
+        try {
+            $pdo->beginTransaction();
+            $pdo->prepare("UPDATE users SET full_name=?, campus_id=? WHERE id=? AND role='teacher'")
+                ->execute([$name, $campusId, $id]);
+
+            // Atamaları senkronize et: önce sil, sonra yeni atamaları ekle (aynı kampüse ait olmalı)
+            $pdo->prepare("DELETE FROM teacher_classrooms WHERE teacher_id=?")->execute([$id]);
+            if ($picks) {
+                $place = implode(',', array_fill(0, count($picks), '?'));
+                $vs = $pdo->prepare("SELECT id FROM classrooms WHERE campus_id=? AND id IN ($place)");
+                $vs->execute(array_merge([$campusId], $picks));
+                $valid = array_map('intval', array_column($vs->fetchAll(), 'id'));
+                if ($valid) {
+                    $ins = $pdo->prepare("INSERT INTO teacher_classrooms (teacher_id, classroom_id) VALUES (?, ?)");
+                    foreach ($valid as $cid) $ins->execute([$id, $cid]);
+                }
+            }
+            $pdo->commit();
+        } catch (\PDOException $ex) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            flash('err', 'Güncelleme yapılamadı.');
+            redirect("/admin/teachers/$id/edit");
+        }
         flash('ok', 'Öğretmen güncellendi.');
         redirect('/admin/teachers');
     }

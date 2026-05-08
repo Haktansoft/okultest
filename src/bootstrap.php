@@ -100,6 +100,13 @@ $r->get ('/admin/campuses/{id}/edit',           ['App\\Controllers\\AdminCampusC
 $r->post('/admin/campuses/{id}/update',         ['App\\Controllers\\AdminCampusController', 'update']);
 $r->post('/admin/campuses/{id}/delete',         ['App\\Controllers\\AdminCampusController', 'delete']);
 
+$r->get ('/admin/classrooms',                   ['App\\Controllers\\AdminClassroomController', 'index']);
+$r->get ('/admin/classrooms/new',               ['App\\Controllers\\AdminClassroomController', 'createForm']);
+$r->post('/admin/classrooms',                   ['App\\Controllers\\AdminClassroomController', 'create']);
+$r->get ('/admin/classrooms/{id}/edit',         ['App\\Controllers\\AdminClassroomController', 'editForm']);
+$r->post('/admin/classrooms/{id}/update',       ['App\\Controllers\\AdminClassroomController', 'update']);
+$r->post('/admin/classrooms/{id}/delete',       ['App\\Controllers\\AdminClassroomController', 'delete']);
+
 $r->get ('/admin/teachers',                     ['App\\Controllers\\AdminTeacherController', 'index']);
 $r->get ('/admin/teachers/new',                 ['App\\Controllers\\AdminTeacherController', 'createForm']);
 $r->post('/admin/teachers',                     ['App\\Controllers\\AdminTeacherController', 'create']);
@@ -112,10 +119,40 @@ $r->post('/admin/teachers/{id}/toggle',         ['App\\Controllers\\AdminTeacher
 $r->get ('/teacher', function () {
     $u = App\requireRole('teacher', 'admin');
     $pdo = App\db();
-    $students    = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='student'")->fetchColumn();
-    $assignments = (int)$pdo->query("SELECT COUNT(*) FROM test_assignments")->fetchColumn();
-    $needsPhys   = (int)$pdo->query("SELECT COUNT(*) FROM test_assignments WHERE status='needs_physical'")->fetchColumn();
-    $completed   = (int)$pdo->query("SELECT COUNT(*) FROM test_assignments WHERE status='completed'")->fetchColumn();
+    if ($u['role'] === 'admin') {
+        $students    = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='student'")->fetchColumn();
+        $assignments = (int)$pdo->query("SELECT COUNT(*) FROM test_assignments")->fetchColumn();
+        $needsPhys   = (int)$pdo->query("SELECT COUNT(*) FROM test_assignments WHERE status='needs_physical'")->fetchColumn();
+        $completed   = (int)$pdo->query("SELECT COUNT(*) FROM test_assignments WHERE status='completed'")->fetchColumn();
+    } else {
+        // Sadece öğretmenin atanmış sınıflarındaki öğrenciler ve onların atamaları
+        $crIds = App\Controllers\TeacherStudentController::myClassroomIds((int)$u['id']);
+        if (!$crIds) {
+            $students = $assignments = $needsPhys = $completed = 0;
+        } else {
+            $place = implode(',', array_fill(0, count($crIds), '?'));
+            $st1 = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role='student' AND classroom_id IN ($place)");
+            $st1->execute($crIds); $students = (int)$st1->fetchColumn();
+            $st2 = $pdo->prepare("
+                SELECT COUNT(*) FROM test_assignments ta
+                JOIN users u ON u.id=ta.student_id
+                WHERE u.classroom_id IN ($place)
+            ");
+            $st2->execute($crIds); $assignments = (int)$st2->fetchColumn();
+            $st3 = $pdo->prepare("
+                SELECT COUNT(*) FROM test_assignments ta
+                JOIN users u ON u.id=ta.student_id
+                WHERE u.classroom_id IN ($place) AND ta.status='needs_physical'
+            ");
+            $st3->execute($crIds); $needsPhys = (int)$st3->fetchColumn();
+            $st4 = $pdo->prepare("
+                SELECT COUNT(*) FROM test_assignments ta
+                JOIN users u ON u.id=ta.student_id
+                WHERE u.classroom_id IN ($place) AND ta.status='completed'
+            ");
+            $st4->execute($crIds); $completed = (int)$st4->fetchColumn();
+        }
+    }
     App\view('teacher/dashboard/index', [
         'title' => $u['role']==='admin' ? 'Sınıf Özeti' : 'Öğretmen Paneli', 'me' => $u,
         'stats' => ['students' => $students, 'assignments' => $assignments, 'needs_physical' => $needsPhys, 'completed' => $completed],
@@ -123,11 +160,6 @@ $r->get ('/teacher', function () {
 });
 
 $r->get ('/teacher/classrooms',              ['App\\Controllers\\TeacherClassroomController', 'index']);
-$r->get ('/teacher/classrooms/new',          ['App\\Controllers\\TeacherClassroomController', 'createForm']);
-$r->post('/teacher/classrooms',              ['App\\Controllers\\TeacherClassroomController', 'create']);
-$r->get ('/teacher/classrooms/{id}/edit',    ['App\\Controllers\\TeacherClassroomController', 'editForm']);
-$r->post('/teacher/classrooms/{id}/update',  ['App\\Controllers\\TeacherClassroomController', 'update']);
-$r->post('/teacher/classrooms/{id}/delete',  ['App\\Controllers\\TeacherClassroomController', 'delete']);
 
 $r->get ('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'index']);
 $r->get ('/teacher/students/new',            ['App\\Controllers\\TeacherStudentController', 'createForm']);

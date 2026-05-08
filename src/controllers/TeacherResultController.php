@@ -11,7 +11,7 @@ class TeacherResultController {
         $isAdmin = $me['role'] === 'admin';
         $sql = "
             SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name,
-                   u.campus_id AS student_campus_id
+                   u.campus_id AS student_campus_id, u.classroom_id AS student_classroom_id
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
@@ -19,8 +19,14 @@ class TeacherResultController {
             WHERE ta.status IN ('completed','needs_physical')";
         $params = [];
         if (!$isAdmin) {
-            $sql .= " AND u.campus_id = ?";
-            $params[] = (int)($me['campus_id'] ?? 0);
+            $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
+            if (!$crIds) {
+                view('teacher/results/index', ['title' => 'Sonuçlar', 'me' => $me, 'items' => [], 'isAdmin' => false]);
+                return;
+            }
+            $place = implode(',', array_fill(0, count($crIds), '?'));
+            $sql .= " AND u.classroom_id IN ($place)";
+            $params = $crIds;
         }
         $sql .= " ORDER BY ta.finished_at DESC, ta.id DESC";
         $st = db()->prepare($sql);
@@ -94,15 +100,17 @@ class TeacherResultController {
 
     private static function canAccess(array $me, array $data): bool {
         if ($me['role'] === 'admin') return true;
-        $myCampus = (int)($me['campus_id'] ?? 0);
-        return $myCampus > 0 && $myCampus === (int)($data['assignment']['student_campus_id'] ?? 0);
+        $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
+        $studentCr = (int)($data['assignment']['student_classroom_id'] ?? 0);
+        return $studentCr > 0 && in_array($studentCr, $crIds, true);
     }
 
     private static function loadDetail(int $assignmentId, ?int $teacherId): ?array {
         $pdo = db();
         $st = $pdo->prepare("
             SELECT ta.*, t.title AS test_title, t.description AS test_description,
-                   u.full_name AS student_name, u.campus_id AS student_campus_id
+                   u.full_name AS student_name, u.campus_id AS student_campus_id,
+                   u.classroom_id AS student_classroom_id
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id

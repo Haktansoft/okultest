@@ -12,6 +12,7 @@ class TeacherPhysicalController {
         $sql = "
             SELECT ta.id, ta.status, ta.finished_at, t.title AS test_title, u.full_name AS student_name,
                    te.full_name AS teacher_name, u.campus_id AS student_campus_id,
+                   u.classroom_id AS student_classroom_id,
                    (SELECT COUNT(*) FROM test_questions tq JOIN questions q ON q.id=tq.question_id WHERE tq.test_id=ta.test_id AND q.is_physical=1) AS phys_total,
                    (SELECT COUNT(*) FROM physical_answers pa WHERE pa.assignment_id=ta.id) AS phys_done
             FROM test_assignments ta
@@ -21,8 +22,14 @@ class TeacherPhysicalController {
             WHERE ta.status='needs_physical'";
         $params = [];
         if (!$isAdmin) {
-            $sql .= " AND u.campus_id = ?";
-            $params[] = (int)($me['campus_id'] ?? 0);
+            $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
+            if (!$crIds) {
+                view('teacher/physical/index', ['title' => 'Fiziksel Sorular', 'me' => $me, 'items' => []]);
+                return;
+            }
+            $place = implode(',', array_fill(0, count($crIds), '?'));
+            $sql .= " AND u.classroom_id IN ($place)";
+            $params = $crIds;
         }
         $sql .= " ORDER BY ta.finished_at DESC";
         $st = db()->prepare($sql);
@@ -89,15 +96,16 @@ class TeacherPhysicalController {
 
     private static function canAccess(array $me, array $data): bool {
         if ($me['role'] === 'admin') return true;
-        $myCampus = (int)($me['campus_id'] ?? 0);
-        return $myCampus > 0 && $myCampus === (int)($data['assignment']['student_campus_id'] ?? 0);
+        $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
+        $studentCr = (int)($data['assignment']['student_classroom_id'] ?? 0);
+        return $studentCr > 0 && in_array($studentCr, $crIds, true);
     }
 
     private static function loadFor(int $assignmentId, ?int $teacherId): ?array {
         $pdo = db();
         if ($teacherId === null) {
             $st = $pdo->prepare("
-                SELECT ta.*, t.title AS test_title, u.full_name AS student_name, u.campus_id AS student_campus_id
+                SELECT ta.*, t.title AS test_title, u.full_name AS student_name, u.campus_id AS student_campus_id, u.classroom_id AS student_classroom_id
                 FROM test_assignments ta
                 JOIN tests t ON t.id=ta.test_id
                 JOIN users u ON u.id=ta.student_id

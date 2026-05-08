@@ -12,7 +12,7 @@ if ($role === 'admin') {
         'Yapı' => [
             ['/admin/institutions',    'Kurumlar',     'bi-building'],
             ['/admin/campuses',        'Kampüsler',    'bi-geo-alt'],
-            ['/teacher/classrooms',    'Sınıflar',     'bi-mortarboard'],
+            ['/admin/classrooms',      'Sınıflar',     'bi-mortarboard'],
         ],
         'İçerik' => [
             ['/admin/categories',      'Kategoriler',  'bi-folder2'],
@@ -38,7 +38,7 @@ if ($role === 'admin') {
             ['/teacher',               'Özet',           'bi-speedometer2'],
         ],
         'Sınıf' => [
-            ['/teacher/classrooms',    'Sınıflar',       'bi-mortarboard'],
+            ['/teacher/classrooms',    'Sınıflarım',     'bi-mortarboard'],
             ['/teacher/students',      'Öğrenciler',     'bi-people'],
             ['/teacher/assignments',   'Atamalar',       'bi-send'],
         ],
