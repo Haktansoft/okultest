@@ -47,13 +47,13 @@
         <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="d-flex gap-2 mb-3 align-items-center">
+        <div class="mb-3">
           <input type="text" class="form-control" id="inst-logo-search" placeholder="Dosya adında ara…">
-          <button type="button" class="btn btn-outline-secondary" id="inst-logo-more" style="display:none">Daha fazla</button>
         </div>
         <div id="inst-logo-loading" class="muted small d-none">Yükleniyor…</div>
         <div id="inst-logo-empty" class="empty-state d-none"><div class="icon"><i class="bi bi-image"></i></div>Görsel bulunamadı.</div>
         <div class="row g-2" id="inst-logo-grid"></div>
+        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-3 d-none" id="inst-logo-more">Daha fazla yükle</button>
       </div>
     </div>
   </div>
@@ -99,7 +99,7 @@
   }
 
   async function loadList(reset) {
-    if (reset) { grid.innerHTML = ''; page = 1; emptyEl.classList.add('d-none'); moreBtn.style.display = 'none'; }
+    if (reset) { grid.innerHTML = ''; page = 1; emptyEl.classList.add('d-none'); moreBtn.classList.add('d-none'); }
     else page++;
     loading.classList.remove('d-none');
     try {
@@ -109,6 +109,7 @@
       loading.classList.add('d-none');
       if (reset && (!data.items || !data.items.length)) {
         emptyEl.classList.remove('d-none');
+        moreBtn.classList.add('d-none');
         return;
       }
       (data.items || []).forEach(it => {
@@ -125,7 +126,7 @@
         grid.appendChild(col);
       });
       hasMore = !!data.hasMore;
-      moreBtn.style.display = hasMore ? '' : 'none';
+      moreBtn.classList.toggle('d-none', !hasMore);
     } catch (e) {
       loading.classList.add('d-none');
       if (reset) grid.innerHTML = '<div class="col-12 text-danger small">Yüklenemedi.</div>';

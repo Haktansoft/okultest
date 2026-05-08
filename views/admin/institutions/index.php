@@ -9,12 +9,13 @@
 
 <div class="table-wrap">
   <table class="table align-middle">
-    <thead><tr><th style="width:80px">Logo</th><th>Ad</th><th class="text-end">Kampüs</th><th></th></tr></thead>
+    <thead><tr><th style="width:60px">ID</th><th style="width:80px">Logo</th><th>Ad</th><th class="text-end">Kampüs</th><th></th></tr></thead>
     <tbody>
       <?php if (!$items): ?>
-        <tr><td colspan="4"><div class="empty-state"><div class="icon"><i class="bi bi-building"></i></div>Kurum yok.</div></td></tr>
+        <tr><td colspan="5"><div class="empty-state"><div class="icon"><i class="bi bi-building"></i></div>Kurum yok.</div></td></tr>
       <?php else: foreach ($items as $i): ?>
         <tr>
+          <td class="muted tiny">#<?= (int)$i['id'] ?></td>
           <td>
             <?php if (!empty($i['logo_media_id'])): ?>
               <img src="/media/<?= (int)$i['logo_media_id'] ?>" alt="" style="width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;background:#fff">

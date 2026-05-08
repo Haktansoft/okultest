@@ -9,13 +9,17 @@
 
 <div class="table-wrap">
   <table class="table align-middle">
-    <thead><tr><th>Kurum</th><th>Kampüs</th><th class="text-end">Öğretmen</th><th class="text-end">Öğrenci</th><th></th></tr></thead>
+    <thead><tr><th style="width:60px">ID</th><th>Kurum</th><th>Kampüs</th><th class="text-end">Öğretmen</th><th class="text-end">Öğrenci</th><th></th></tr></thead>
     <tbody>
       <?php if (!$items): ?>
-        <tr><td colspan="5"><div class="empty-state"><div class="icon"><i class="bi bi-geo-alt"></i></div>Kampüs yok.</div></td></tr>
+        <tr><td colspan="6"><div class="empty-state"><div class="icon"><i class="bi bi-geo-alt"></i></div>Kampüs yok.</div></td></tr>
       <?php else: foreach ($items as $i): ?>
         <tr>
-          <td><span class="badge text-bg-light"><?= e($i['institution_name']) ?></span></td>
+          <td class="muted tiny">#<?= (int)$i['id'] ?></td>
+          <td>
+            <span class="badge text-bg-light">#<?= (int)$i['institution_id'] ?></span>
+            <span class="badge text-bg-light"><?= e($i['institution_name']) ?></span>
+          </td>
           <td class="fw-semibold"><?= e($i['name']) ?></td>
           <td class="text-end"><?= (int)$i['teacher_count'] ?></td>
           <td class="text-end"><?= (int)$i['student_count'] ?></td>

@@ -39,6 +39,20 @@ class TeacherStudentController {
 
     public static function createForm(): void {
         $me = requireRole('teacher', 'admin');
+        $isAdmin = $me['role'] === 'admin';
+        if ($isAdmin) {
+            $teachers = self::teachersWithCampus();
+            if (!$teachers) {
+                flash('err', 'Önce en az bir öğretmen oluştur (kampüs atamalı).');
+                redirect('/admin/teachers/new');
+            }
+            $classroomsByCampus = self::allClassroomsByCampus();
+            view('teacher/students/form', [
+                'title' => 'Yeni Öğrenci', 'me' => $me, 'item' => null,
+                'classrooms' => [], 'teachers' => $teachers, 'classroomsByCampus' => $classroomsByCampus,
+            ]);
+            return;
+        }
         $campusId = self::myCampusId($me);
         if (!$campusId) {
             flash('err', 'Önce sana bir kampüs atanmalı.');
@@ -50,17 +64,34 @@ class TeacherStudentController {
 
     public static function create(): void {
         $me = requireRole('teacher', 'admin');
-        $campusId = self::myCampusId($me);
-        if (!$campusId) { flash('err', 'Kampüs yok.'); redirect('/teacher/students'); }
+        $isAdmin = $me['role'] === 'admin';
 
-        $name  = trim((string)($_POST['full_name'] ?? ''));
-        $tc    = self::cleanTc($_POST['tc'] ?? '');
-        $crId  = (int)($_POST['classroom_id'] ?? 0);
+        $name = trim((string)($_POST['full_name'] ?? ''));
+        $tc   = self::cleanTc($_POST['tc'] ?? '');
+        $crId = (int)($_POST['classroom_id'] ?? 0);
+
+        // Admin: hangi öğretmene → o öğretmenin kampüsü kullanılır
+        if ($isAdmin) {
+            $teacherId = (int)($_POST['teacher_id'] ?? 0);
+            $teacher = self::loadActiveTeacher($teacherId);
+            if (!$teacher || empty($teacher['campus_id'])) {
+                flash('err', 'Geçerli bir öğretmen seç (kampüsü olmalı).');
+                redirect('/teacher/students/new');
+            }
+            $campusId = (int)$teacher['campus_id'];
+            $creatorId = $teacherId; // öğrenciyi ait olduğu öğretmen oluşturmuş gibi davran
+            $teacherForAssign = $teacherId;
+        } else {
+            $campusId = self::myCampusId($me);
+            if (!$campusId) { flash('err', 'Kampüs yok.'); redirect('/teacher/students'); }
+            $creatorId = (int)$me['id'];
+            $teacherForAssign = (int)$me['id'];
+        }
 
         $err = self::validateBasics($name, $tc);
         if ($err) { flash('err', $err); redirect('/teacher/students/new'); }
         if ($crId <= 0 || !self::classroomBelongsToCampus($crId, $campusId)) {
-            flash('err', 'Geçerli bir sınıf seç.');
+            flash('err', 'Sınıf seçilen öğretmenin kampüsüne ait olmalı.');
             redirect('/teacher/students/new');
         }
         if (self::tcExists($tc)) {
@@ -79,13 +110,9 @@ class TeacherStudentController {
                 INSERT INTO users (role, full_name, tc, password, campus_id, classroom_id, is_active, created_by)
                 VALUES ('student', ?, ?, ?, ?, ?, 1, ?)
             ");
-            $st->execute([$name, $tc, $tc, $campusId, $crId, $me['id']]);
+            $st->execute([$name, $tc, $tc, $campusId, $crId, $creatorId]);
             $studentId = (int)$pdo->lastInsertId();
-
-            // Mevcut tüm testleri otomatik ata
-            $teacherForAssign = $me['role'] === 'teacher' ? (int)$me['id'] : self::pickTeacherForCampus($campusId, (int)$me['id']);
             self::autoAssignAllTests($studentId, $teacherForAssign);
-
             $pdo->commit();
         } catch (\PDOException $ex) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -187,6 +214,32 @@ class TeacherStudentController {
         $st = db()->prepare("SELECT id, name FROM classrooms WHERE campus_id=? ORDER BY name");
         $st->execute([$campusId]);
         return $st->fetchAll();
+    }
+
+    private static function teachersWithCampus(): array {
+        return db()->query("
+            SELECT u.id, u.full_name, u.campus_id, c.name AS campus_name, i.name AS institution_name
+              FROM users u
+              JOIN campuses c ON c.id = u.campus_id
+              JOIN institutions i ON i.id = c.institution_id
+             WHERE u.role='teacher' AND u.is_active=1 AND u.campus_id IS NOT NULL
+          ORDER BY i.name, c.name, u.full_name
+        ")->fetchAll();
+    }
+
+    private static function allClassroomsByCampus(): array {
+        $rows = db()->query("SELECT id, campus_id, name FROM classrooms ORDER BY name")->fetchAll();
+        $map = [];
+        foreach ($rows as $r) $map[(int)$r['campus_id']][] = ['id' => (int)$r['id'], 'name' => $r['name']];
+        return $map;
+    }
+
+    private static function loadActiveTeacher(int $id): ?array {
+        if ($id <= 0) return null;
+        $st = db()->prepare("SELECT id, full_name, campus_id FROM users WHERE id=? AND role='teacher' AND is_active=1");
+        $st->execute([$id]);
+        $u = $st->fetch();
+        return $u ?: null;
     }
 
     private static function classroomBelongsToCampus(int $crId, int $campusId): bool {

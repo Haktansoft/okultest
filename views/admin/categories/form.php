@@ -52,13 +52,13 @@
         <button class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
       </div>
       <div class="modal-body">
-        <div class="d-flex gap-2 mb-3 align-items-center">
+        <div class="mb-3">
           <input type="text" class="form-control" id="cat-audio-search" placeholder="Dosya adında ara…">
-          <button type="button" class="btn btn-outline-secondary" id="cat-audio-more" style="display:none">Daha fazla</button>
         </div>
         <div id="cat-audio-loading" class="muted small d-none">Yükleniyor…</div>
         <div id="cat-audio-empty" class="empty-state d-none"><div class="icon"><i class="bi bi-music-note-beamed"></i></div>Ses dosyası bulunamadı.</div>
         <ul class="list-group" id="cat-audio-list"></ul>
+        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-3 d-none" id="cat-audio-more">Daha fazla yükle</button>
       </div>
     </div>
   </div>
@@ -114,7 +114,7 @@
   }
 
   async function loadList(reset) {
-    if (reset) { list.innerHTML = ''; page = 1; emptyEl.classList.add('d-none'); moreBtn.style.display = 'none'; }
+    if (reset) { list.innerHTML = ''; page = 1; emptyEl.classList.add('d-none'); moreBtn.classList.add('d-none'); }
     else page++;
     loading.classList.remove('d-none');
     try {
@@ -124,6 +124,7 @@
       loading.classList.add('d-none');
       if (reset && (!data.items || !data.items.length)) {
         emptyEl.classList.remove('d-none');
+        moreBtn.classList.add('d-none');
         return;
       }
       (data.items || []).forEach(it => {
@@ -144,7 +145,7 @@
         list.appendChild(li);
       });
       hasMore = !!data.hasMore;
-      moreBtn.style.display = hasMore ? '' : 'none';
+      moreBtn.classList.toggle('d-none', !hasMore);
     } catch (e) {
       loading.classList.add('d-none');
       if (reset) list.innerHTML = '<li class="list-group-item text-danger small">Yüklenemedi.</li>';
