@@ -16,7 +16,7 @@
   <div class="card"><div class="card-body"><div class="empty-state"><div class="icon"><i class="bi bi-info-circle"></i></div>Bu testte fiziksel soru yok.</div></div></div>
 <?php else: ?>
 
-<div class="test-runner test-runner-teacher">
+<div class="test-runner test-runner-teacher test-runner-physical">
   <aside class="qnav">
     <div class="qnav-title">
       <i class="bi bi-compass"></i>

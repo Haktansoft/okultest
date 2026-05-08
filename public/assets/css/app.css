@@ -530,18 +530,19 @@ textarea.form-control { line-height: 1.5; }
 .test-runner .meta-physical { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 
 /* Öğretmen ekranlarında şıklar yatay: harf solda, gövde sağda — dikeyde yer kazanır. */
-.test-runner-teacher .options-grid .option {
+/* Sadece fiziksel soru ekranı kompakt olsun: harf solda, gövde sağda */
+.test-runner-physical .options-grid .option {
   flex-direction: row;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
 }
-.test-runner-teacher .opt-letter {
+.test-runner-physical .opt-letter {
   margin-bottom: 0;
   flex-shrink: 0;
 }
-.test-runner-teacher .opt-body { flex-direction: row; align-items: center; gap: 10px; }
-.test-runner-teacher .opt-media-slot { height: 110px; flex-shrink: 0; max-width: 50%; }
+.test-runner-physical .opt-body { flex-direction: row; align-items: center; gap: 10px; }
+.test-runner-physical .opt-media-slot { height: 110px; flex-shrink: 0; max-width: 50%; }
 
 .test-runner .test-topbar-center {
   display: flex; gap: 8px; justify-content: center; align-items: center;
