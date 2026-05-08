@@ -131,11 +131,23 @@ class TeacherStudentController {
         $me = requireRole('teacher', 'admin');
         $item = self::loadOwned((int)$id, $me);
         if (!$item) { flash('err', 'Öğrenci bulunamadı.'); redirect('/teacher/students'); }
+        $isAdmin = $me['role'] === 'admin';
 
         $name  = trim((string)($_POST['full_name'] ?? ''));
         $tc    = self::cleanTc($_POST['tc'] ?? '');
         $grade = trim((string)($_POST['grade_level'] ?? ''));
         $sect  = trim((string)($_POST['section'] ?? ''));
+
+        // Sadece admin kampüs değiştirebilir; öğretmen kendi kampüsündeki kalır
+        if ($isAdmin) {
+            $campusId = (int)($_POST['campus_id'] ?? 0);
+            if ($campusId <= 0 || !self::campusExists($campusId)) {
+                flash('err', 'Geçerli bir kampüs seç.');
+                redirect("/teacher/students/$id/edit");
+            }
+        } else {
+            $campusId = (int)$item['campus_id'];
+        }
 
         $err = self::validateBasics($name, $tc, $grade, $sect);
         if ($err) { flash('err', $err); redirect("/teacher/students/$id/edit"); }
@@ -150,9 +162,9 @@ class TeacherStudentController {
         try {
             db()->prepare("
                 UPDATE users
-                   SET full_name=?, tc=?, password=?, grade_level=?, section=?
+                   SET full_name=?, tc=?, password=?, grade_level=?, section=?, campus_id=?
                  WHERE id=? AND role='student'
-            ")->execute([$name, $tc, $tc, $grade, $sect, $id]);
+            ")->execute([$name, $tc, $tc, $grade, $sect, $campusId, $id]);
         } catch (\PDOException $ex) {
             flash('err', 'Güncelleme yapılamadı.');
             redirect("/teacher/students/$id/edit");

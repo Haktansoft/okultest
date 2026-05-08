@@ -40,9 +40,6 @@ if ($role === 'admin') {
             ['/teacher/students',      'Öğrenciler',     'bi-people'],
             ['/teacher/assignments',   'Atamalar',       'bi-send'],
         ],
-        'İçerik' => [
-            ['/admin/tests',           'Testler',        'bi-card-checklist'],
-        ],
         'Sonuçlar' => [
             ['/teacher/results',       'Sonuçlar',       'bi-clipboard-data'],
             ['/teacher/physical',      'Fiziksel Sorular','bi-pencil-square'],

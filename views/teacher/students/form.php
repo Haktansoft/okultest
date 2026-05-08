@@ -16,13 +16,13 @@
   <div class="card-body">
     <?= csrfField() ?>
 
-    <?php if (!$editing && $isAdmin): ?>
+    <?php if ($isAdmin): ?>
       <div class="mb-3">
         <label class="form-label">Kampüs <span class="muted tiny">(öğrencinin bağlanacağı kampüs)</span></label>
         <select class="form-select" name="campus_id" required>
           <option value="">— Kampüs seç —</option>
           <?php foreach ($campuses as $c): ?>
-            <option value="<?= (int)$c['id'] ?>">
+            <option value="<?= (int)$c['id'] ?>" <?= ($item && (int)$item['campus_id'] === (int)$c['id']) ? 'selected' : '' ?>>
               <?= e($c['institution_name']) ?> — <?= e($c['campus_name']) ?>
             </option>
           <?php endforeach; ?>

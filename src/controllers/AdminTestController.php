@@ -7,7 +7,7 @@ use function App\{db, e, flash, redirect, requireRole, view};
 
 class AdminTestController {
     public static function index(): void {
-        $me = requireRole('admin', 'teacher');
+        $me = requireRole('admin');
         $items = db()->query("
             SELECT t.*, (SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id=t.id) AS qcount,
                        (SELECT COUNT(*) FROM test_assignments ta WHERE ta.test_id=t.id) AS acount
@@ -65,7 +65,7 @@ class AdminTestController {
     }
 
     public static function manageQuestions(string $id): void {
-        $me = requireRole('admin', 'teacher');
+        $me = requireRole('admin');
         $st = db()->prepare("SELECT * FROM tests WHERE id=?");
         $st->execute([$id]);
         $test = $st->fetch();
@@ -142,7 +142,7 @@ class AdminTestController {
     }
 
     public static function pdf(string $id): void {
-        requireRole('admin', 'teacher');
+        requireRole('admin');
         $pdo = db();
         $st = $pdo->prepare("SELECT * FROM tests WHERE id=?");
         $st->execute([$id]);
