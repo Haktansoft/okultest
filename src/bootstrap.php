@@ -90,6 +90,7 @@ $r->get ('/admin/teachers',                     ['App\\Controllers\\AdminTeacher
 $r->get ('/admin/teachers/new',                 ['App\\Controllers\\AdminTeacherController', 'createForm']);
 $r->post('/admin/teachers',                     ['App\\Controllers\\AdminTeacherController', 'create']);
 $r->post('/admin/teachers/{id}/reset',          ['App\\Controllers\\AdminTeacherController', 'reset']);
+$r->post('/admin/teachers/{id}/rename',         ['App\\Controllers\\AdminTeacherController', 'rename']);
 $r->post('/admin/teachers/{id}/toggle',         ['App\\Controllers\\AdminTeacherController', 'toggle']);
 
 // === Teacher ===
@@ -110,6 +111,7 @@ $r->get ('/teacher/students',                ['App\\Controllers\\TeacherStudentC
 $r->get ('/teacher/students/new',            ['App\\Controllers\\TeacherStudentController', 'createForm']);
 $r->post('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'create']);
 $r->post('/teacher/students/{id}/reset',     ['App\\Controllers\\TeacherStudentController', 'reset']);
+$r->post('/teacher/students/{id}/rename',    ['App\\Controllers\\TeacherStudentController', 'rename']);
 $r->post('/teacher/students/{id}/toggle',    ['App\\Controllers\\TeacherStudentController', 'toggle']);
 
 $r->get ('/teacher/assignments',             ['App\\Controllers\\TeacherAssignmentController', 'index']);

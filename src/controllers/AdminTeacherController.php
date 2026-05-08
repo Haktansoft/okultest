@@ -65,6 +65,19 @@ class AdminTeacherController {
         redirect('/admin/teachers');
     }
 
+    public static function rename(string $id): void {
+        requireRole('admin');
+        $name = trim((string)($_POST['full_name'] ?? ''));
+        if ($name === '') {
+            flash('err', 'Ad-soyad boş olamaz.');
+            redirect('/admin/teachers');
+        }
+        $st = db()->prepare("UPDATE users SET full_name=? WHERE id=? AND role='teacher'");
+        $st->execute([$name, $id]);
+        flash('ok', $st->rowCount() ? 'Ad-soyad güncellendi.' : 'Değişiklik yapılmadı.');
+        redirect('/admin/teachers');
+    }
+
     private static function passwordExists(string $pass, int $excludeId = 0): bool {
         $st = db()->prepare("SELECT id FROM users WHERE password = ? AND id <> ? LIMIT 1");
         $st->execute([$pass, $excludeId]);
