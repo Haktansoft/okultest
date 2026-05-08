@@ -48,10 +48,19 @@ $statusBadge = [
             <?php if ($i['status'] === 'needs_physical'): ?>
               <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>">Fiziksel</a>
             <?php endif; ?>
+            <?php if (in_array($i['status'], ['in_progress','completed','needs_physical'], true)): ?>
+              <form class="d-inline" method="post" action="/teacher/assignments/<?= (int)$i['id'] ?>/reset"
+                    onsubmit="return confirm('Test sıfırlansın mı?\n\nÖğrencinin tüm yanıtları, fiziksel cevaplar ve süre kayıtları silinir; test yeniden \'bekliyor\' durumuna döner.')">
+                <?= csrfField() ?>
+                <button class="btn btn-sm btn-outline-warning" title="Testi sıfırla — öğrenci yeniden çözebilir">
+                  <i class="bi bi-arrow-counterclockwise"></i> Sıfırla
+                </button>
+              </form>
+            <?php endif; ?>
             <?php if (in_array($i['status'], ['pending','in_progress'], true)): ?>
               <form class="d-inline" method="post" action="/teacher/assignments/<?= (int)$i['id'] ?>/delete" onsubmit="return confirm('Atama silinsin mi?')">
                 <?= csrfField() ?>
-                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-sm btn-outline-danger" title="Atamayı sil"><i class="bi bi-trash"></i></button>
               </form>
             <?php endif; ?>
           </td>

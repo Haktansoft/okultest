@@ -232,11 +232,14 @@ class StudentTestController {
         $test = $st->fetch();
 
         $qs = $pdo->prepare("
-            SELECT q.*, c.name AS category_name FROM test_questions tq
-            JOIN questions q ON q.id = tq.question_id
-            LEFT JOIN categories c ON c.id = q.category_id
-            WHERE tq.test_id=? AND q.is_physical=0
-            ORDER BY tq.sort_order, q.id
+            SELECT q.*, c.name AS category_name,
+                   c.description AS category_description,
+                   c.description_media_id AS category_audio_id
+              FROM test_questions tq
+              JOIN questions q  ON q.id = tq.question_id
+              LEFT JOIN categories c ON c.id = q.category_id
+             WHERE tq.test_id=? AND q.is_physical=0
+             ORDER BY tq.sort_order, q.id
         ");
         $qs->execute([$testId]);
         $questions = $qs->fetchAll();
@@ -255,6 +258,7 @@ class StudentTestController {
             }
             foreach ($questions as $q) {
                 if (!empty($q['prompt_media_id'])) $mediaIds[(int)$q['prompt_media_id']] = true;
+                if (!empty($q['category_audio_id'])) $mediaIds[(int)$q['category_audio_id']] = true;
             }
         }
         $mediaById = [];
@@ -268,6 +272,7 @@ class StudentTestController {
         foreach ($questions as &$q) {
             $q['options'] = $optionsByQ[(int)$q['id']] ?? [];
             $q['prompt_media'] = !empty($q['prompt_media_id']) ? ($mediaById[(int)$q['prompt_media_id']] ?? null) : null;
+            $q['category_audio'] = !empty($q['category_audio_id']) ? ($mediaById[(int)$q['category_audio_id']] ?? null) : null;
             foreach ($q['options'] as &$o) {
                 $o['media'] = !empty($o['media_id']) ? ($mediaById[(int)$o['media_id']] ?? null) : null;
             }

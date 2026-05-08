@@ -8,6 +8,9 @@
     : `attempt:${D.assignment_id}`;
   const BLANK = '__blank__';
   const LETTERS = ['A','B','C','D','E','F','G','H','I','J'];
+  const AUTO_ADVANCE = !!D.autoAdvance && !isTeacher;
+  const TRANSITION_MS = 260;
+
   const container = document.getElementById('question-container');
   const tpl = document.getElementById('opt-template');
   const prevBtn = document.getElementById('prev-btn');
@@ -44,11 +47,32 @@
   let currentIndex = Math.min(local.currentIndex || 0, D.questions.length - 1);
   if (currentIndex < 0) currentIndex = 0;
 
+  // Bir kategorinin intro'sunu göstermek için: o kategoride henüz hiçbir soru
+  // işaretlenmemişse VE bu sefer o kategorinin ilk sorusuna geliyorsak.
+  // İntro acknowledgment'ı tek seferlik gösterimi sağlar.
+  const introSeen = new Set();
+  // Sayfa açılışında: zaten yanıtlı kategorilerin intro'sunu görmüş say.
+  for (const q of D.questions) {
+    if (marked[q.id]) introSeen.add(q.category_id);
+  }
+  // Şu an gösterilen "sahne" — soru mu yoksa kategori-intro mu
+  let currentScene = null; // {type:'question'|'intro', categoryId?, qIndex?}
+
+  // Bir kategorinin "ilk soru indeksi" tablosu — soruları sıralı taradığımızda
+  // kategori değiştiği yer.
+  const firstIndexByCategory = {};
+  D.questions.forEach((q, i) => {
+    if (firstIndexByCategory[q.category_id] === undefined) {
+      firstIndexByCategory[q.category_id] = i;
+    }
+  });
+
   let questionEnterTime = Date.now();
   let saveTimer = null;
   let dirty = false;
   let submitted = false;
   let remaining = D.remainingSeconds;
+  let advanceTimer = null;
 
   function readLocal() {
     try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
@@ -62,7 +86,9 @@
     } catch {}
   }
 
+  // ---- Sidebar (öğretmen modunda var, öğrenci modunda DOM yok) ----
   function renderSidebar() {
+    if (!qnavGroups) return;
     qnavGroups.innerHTML = '';
     const groups = new Map();
     D.questions.forEach((q, i) => {
@@ -111,13 +137,93 @@
     const total = D.questions.length;
     const done = D.questions.filter(q => marked[q.id]).length;
     const left = total - done;
-    remainingCounter.textContent = `Kalan ${left}`;
+    if (remainingCounter) remainingCounter.textContent = `Kalan ${left}`;
     if (progressFill) {
       progressFill.style.width = ((done / total) * 100).toFixed(1) + '%';
     }
   }
 
-  function render() {
+  // ---- Sahne kararı ve render zinciri ----
+
+  // currentIndex için: önce o kategorinin intro'sunu gösterelim mi?
+  function shouldShowIntroForCurrent() {
+    if (isTeacher) return false; // öğretmen modunda intro yok
+    const q = D.questions[currentIndex];
+    if (!q) return false;
+    if (introSeen.has(q.category_id)) return false;
+    if (firstIndexByCategory[q.category_id] !== currentIndex) return false;
+    const hasIntroContent = (q.category_description && q.category_description.trim().length > 0) || q.category_audio;
+    if (!hasIntroContent) {
+      introSeen.add(q.category_id);
+      return false;
+    }
+    return true;
+  }
+
+  function renderIntro() {
+    const q = D.questions[currentIndex];
+    container.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'category-intro';
+
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'ci-eyebrow';
+    eyebrow.innerHTML = '<i class="bi bi-bookmark-fill"></i> Yeni Bölüm';
+    card.appendChild(eyebrow);
+
+    const title = document.createElement('h2');
+    title.className = 'ci-title';
+    title.textContent = q.category || 'Bölüm';
+    card.appendChild(title);
+
+    if (q.category_description && q.category_description.trim().length > 0) {
+      const desc = document.createElement('div');
+      desc.className = 'ci-desc';
+      desc.textContent = q.category_description.trim();
+      card.appendChild(desc);
+    }
+
+    if (q.category_audio) {
+      const audio = document.createElement('div');
+      audio.className = 'ci-audio';
+      audio.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+      const a = document.createElement('audio');
+      a.controls = true;
+      a.src = q.category_audio.url;
+      a.preload = 'auto';
+      audio.appendChild(a);
+      card.appendChild(audio);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'ci-actions';
+    const startBtn = document.createElement('button');
+    startBtn.type = 'button';
+    startBtn.className = 'ci-start';
+    startBtn.innerHTML = '<i class="bi bi-play-fill"></i> Başla';
+    startBtn.addEventListener('click', () => {
+      introSeen.add(q.category_id);
+      currentScene = null;
+      transitionTo(renderCurrent);
+    });
+    actions.appendChild(startBtn);
+    card.appendChild(actions);
+
+    container.appendChild(card);
+    currentScene = { type: 'intro', categoryId: q.category_id };
+
+    if (progress) progress.textContent = `${currentIndex + 1} / ${D.questions.length}`;
+    if (prevBtn) prevBtn.disabled = currentIndex === 0;
+    if (nextBtn) {
+      nextBtn.disabled = true;
+      nextBtn.style.display = 'none';
+    }
+    if (finishBtn) finishBtn.style.display = 'none';
+    updateProgress();
+    renderSidebar();
+  }
+
+  function renderQuestion() {
     const q = D.questions[currentIndex];
     progress.textContent = `${currentIndex + 1} / ${D.questions.length}`;
     container.innerHTML = '';
@@ -142,7 +248,7 @@
     if (q.category) {
       const cat = document.createElement('span');
       cat.className = 'qc-cat';
-      cat.innerHTML = `<i class="bi bi-bookmark"></i> ${q.category}`;
+      cat.innerHTML = `<i class="bi bi-bookmark"></i> ${escapeHtml(q.category)}`;
       headRight.appendChild(cat);
     }
     head.appendChild(headRight);
@@ -160,7 +266,6 @@
     const opts = document.createElement('div');
     const hasMediaOpt = q.options.some(o => o && o.media);
     const longestLabel = q.options.reduce((m, o) => Math.max(m, ((o && o.label) || '').length), 0);
-    // Görselli şıklar her zaman 3 sütun. Yazılı şıklar uzunsa tek sütuna iner.
     const textStacked = !hasMediaOpt && longestLabel > 22;
     opts.className = 'options-grid mt-4'
       + (hasMediaOpt ? ' has-media' : '')
@@ -195,6 +300,7 @@
             blankBtnRef.classList.remove('active');
           }
           scheduleSave(400);
+          if (AUTO_ADVANCE) scheduleAutoAdvance();
         }
       });
       opts.appendChild(node);
@@ -207,7 +313,7 @@
     hint.className = 'qa-hint';
     hint.innerHTML = isTeacher
       ? '<i class="bi bi-info-circle"></i> Öğrenci cevap vermediyse boş bırakabilirsin. Tüm soruları işaretledikten sonra kaydet.'
-      : '<i class="bi bi-info-circle"></i> Cevap vermeden sonraki soruya geçemezsin. Emin değilsen boş bırakabilirsin.';
+      : '<i class="bi bi-info-circle"></i> Bir şıkkı seçtiğinde otomatik olarak sonraki soruya geçilir. Emin değilsen boş bırakabilirsin.';
     actions.appendChild(hint);
 
     const blankBtn = document.createElement('button');
@@ -233,12 +339,14 @@
       blankBtn.innerHTML = '<i class="bi bi-check2"></i> Boş bırakıldı';
       blankBtn.classList.add('active');
       scheduleSave(400);
+      if (AUTO_ADVANCE) scheduleAutoAdvance();
     });
     actions.appendChild(blankBtn);
     blankBtnRef = blankBtn;
     card.appendChild(actions);
 
     container.appendChild(card);
+    currentScene = { type: 'question', qIndex: currentIndex };
 
     updateNavButtons();
     updateProgress();
@@ -255,7 +363,37 @@
     }
   }
 
+  function renderCurrent() {
+    if (shouldShowIntroForCurrent()) renderIntro();
+    else renderQuestion();
+  }
+
+  function transitionTo(renderFn) {
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+    container.classList.remove('is-entering');
+    container.classList.add('is-leaving');
+    setTimeout(() => {
+      renderFn();
+      container.classList.remove('is-leaving');
+      container.classList.add('is-entering');
+      // Bir frame sonra is-entering'i kaldır → enter animasyonu çalışsın
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => container.classList.remove('is-entering'));
+      });
+    }, TRANSITION_MS);
+  }
+
+  function scheduleAutoAdvance() {
+    if (advanceTimer) clearTimeout(advanceTimer);
+    const isLast = currentIndex === D.questions.length - 1;
+    if (isLast) return; // son soruda otomatik bitirme yok — kullanıcı butonla bitirsin
+    advanceTimer = setTimeout(() => {
+      doMove(+1);
+    }, 480);
+  }
+
   function updateNavButtons() {
+    if (!nextBtn || !prevBtn || !finishBtn) return;
     const q = D.questions[currentIndex];
     const isLast = currentIndex === D.questions.length - 1;
     const canAdvance = isTeacher || marked[q.id] === true;
@@ -293,8 +431,14 @@
     return wrap;
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
   function trackTimeOnLeave() {
+    if (currentScene && currentScene.type !== 'question') return;
     const q = D.questions[currentIndex];
+    if (!q) return;
     const dt = Math.floor((Date.now() - questionEnterTime) / 1000);
     timings[q.id] = (timings[q.id] || 0) + dt;
     persistLocal();
@@ -308,7 +452,7 @@
     }
   }
 
-  function move(delta) {
+  function doMove(delta) {
     const q = D.questions[currentIndex];
     if (delta > 0 && !isTeacher && !marked[q.id]) return;
     trackTimeOnLeave();
@@ -317,7 +461,7 @@
     if (next < 0 || next >= D.questions.length) return;
     currentIndex = next;
     persistLocal();
-    render();
+    transitionTo(renderCurrent);
   }
 
   function jumpTo(idx) {
@@ -326,7 +470,7 @@
     if (!isTeacher) scheduleSave(0);
     currentIndex = idx;
     persistLocal();
-    render();
+    transitionTo(renderCurrent);
   }
 
   async function finishTest(skipConfirm = false) {
@@ -374,9 +518,9 @@
     form.submit();
   }
 
-  prevBtn.addEventListener('click', () => move(-1));
-  nextBtn.addEventListener('click', () => move(+1));
-  finishBtn.addEventListener('click', () => finishTest(false));
+  if (prevBtn) prevBtn.addEventListener('click', () => doMove(-1));
+  if (nextBtn) nextBtn.addEventListener('click', () => doMove(+1));
+  if (finishBtn) finishBtn.addEventListener('click', () => finishTest(false));
 
   function scheduleSave(delay) {
     if (isTeacher) return;
@@ -453,5 +597,5 @@
     const tInt = setInterval(tick, 1000);
   }
 
-  render();
+  renderCurrent();
 })();

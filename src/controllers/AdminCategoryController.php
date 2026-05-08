@@ -14,17 +14,18 @@ class AdminCategoryController {
 
     public static function createForm(): void {
         $me = requireRole('admin');
-        view('admin/categories/form', ['title' => 'Yeni Kategori', 'me' => $me, 'item' => null]);
+        view('admin/categories/form', ['title' => 'Yeni Kategori', 'me' => $me, 'item' => null, 'audio' => null]);
     }
 
     public static function create(): void {
         $me = requireRole('admin');
-        $name = trim((string)($_POST['name'] ?? ''));
-        $desc = trim((string)($_POST['description'] ?? ''));
+        $name   = trim((string)($_POST['name'] ?? ''));
+        $desc   = trim((string)($_POST['description'] ?? ''));
+        $audio  = self::validateAudioId($_POST['description_media_id'] ?? null);
         if ($name === '') { flash('err', 'Kategori adı boş olamaz.'); redirect('/admin/categories/new'); }
         try {
-            $st = db()->prepare("INSERT INTO categories (name, description, created_by) VALUES (?, ?, ?)");
-            $st->execute([$name, $desc !== '' ? $desc : null, $me['id']]);
+            $st = db()->prepare("INSERT INTO categories (name, description, description_media_id, created_by) VALUES (?, ?, ?, ?)");
+            $st->execute([$name, $desc !== '' ? $desc : null, $audio, $me['id']]);
         } catch (\PDOException $ex) {
             flash('err', 'Aynı isimde bir kategori zaten var.');
             redirect('/admin/categories/new');
@@ -39,23 +40,40 @@ class AdminCategoryController {
         $st->execute([$id]);
         $item = $st->fetch();
         if (!$item) { flash('err', 'Kategori bulunamadı.'); redirect('/admin/categories'); }
-        view('admin/categories/form', ['title' => 'Kategori Düzenle', 'me' => $me, 'item' => $item]);
+        $audio = null;
+        if (!empty($item['description_media_id'])) {
+            $ms = db()->prepare("SELECT id, original_name, kind FROM media WHERE id=? AND kind='audio'");
+            $ms->execute([$item['description_media_id']]);
+            $audio = $ms->fetch() ?: null;
+        }
+        view('admin/categories/form', [
+            'title' => 'Kategori Düzenle', 'me' => $me, 'item' => $item, 'audio' => $audio,
+        ]);
     }
 
     public static function update(string $id): void {
         requireRole('admin');
-        $name = trim((string)($_POST['name'] ?? ''));
-        $desc = trim((string)($_POST['description'] ?? ''));
+        $name   = trim((string)($_POST['name'] ?? ''));
+        $desc   = trim((string)($_POST['description'] ?? ''));
+        $audio  = self::validateAudioId($_POST['description_media_id'] ?? null);
         if ($name === '') { flash('err', 'Kategori adı boş olamaz.'); redirect("/admin/categories/$id/edit"); }
         try {
-            $st = db()->prepare("UPDATE categories SET name=?, description=? WHERE id=?");
-            $st->execute([$name, $desc !== '' ? $desc : null, $id]);
+            $st = db()->prepare("UPDATE categories SET name=?, description=?, description_media_id=? WHERE id=?");
+            $st->execute([$name, $desc !== '' ? $desc : null, $audio, $id]);
         } catch (\PDOException $ex) {
             flash('err', 'Aynı isimde başka kategori var.');
             redirect("/admin/categories/$id/edit");
         }
         flash('ok', 'Kategori güncellendi.');
         redirect('/admin/categories');
+    }
+
+    private static function validateAudioId($raw): ?int {
+        $id = (int)$raw;
+        if ($id <= 0) return null;
+        $st = db()->prepare("SELECT id FROM media WHERE id=? AND kind='audio'");
+        $st->execute([$id]);
+        return $st->fetchColumn() ? $id : null;
     }
 
     public static function delete(string $id): void {

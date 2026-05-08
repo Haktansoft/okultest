@@ -71,6 +71,40 @@ class TeacherAssignmentController {
         redirect('/teacher/assignments');
     }
 
+    /** Atamayı tamamen sıfırla — öğrenci testi yeniden çözebilsin */
+    public static function reset(string $id): void {
+        requireRole('teacher', 'admin');
+        $pdo = db();
+        $st = $pdo->prepare("SELECT id FROM test_assignments WHERE id=?");
+        $st->execute([$id]);
+        if (!$st->fetchColumn()) {
+            flash('err', 'Atama bulunamadı.');
+            redirect('/teacher/assignments');
+        }
+        try {
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM attempt_answers   WHERE assignment_id=?")->execute([$id]);
+            $pdo->prepare("DELETE FROM physical_answers  WHERE assignment_id=?")->execute([$id]);
+            $pdo->prepare("DELETE FROM attempt_events    WHERE assignment_id=?")->execute([$id]);
+            $pdo->prepare("
+                UPDATE test_assignments
+                   SET status='pending',
+                       mode=NULL,
+                       started_at=NULL,
+                       finished_at=NULL,
+                       total_score=NULL
+                 WHERE id=?
+            ")->execute([$id]);
+            $pdo->commit();
+        } catch (\PDOException $ex) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            flash('err', 'Sıfırlama sırasında hata oluştu.');
+            redirect('/teacher/assignments');
+        }
+        flash('ok', 'Atama sıfırlandı — öğrenci testi yeniden çözebilir.');
+        redirect('/teacher/assignments');
+    }
+
     /** Öğrenci adına toplu yanıt giriş ekranı */
     public static function bulkForm(string $id): void {
         $me = requireRole('teacher', 'admin');

@@ -1,18 +1,5 @@
 <?php use function App\{e, csrfToken, mediaUrl}; ?>
-<div class="test-runner">
-  <aside class="qnav">
-    <div class="qnav-title">
-      <i class="bi bi-compass"></i>
-      <span>Soru Gezgini</span>
-    </div>
-    <div id="qnav-groups"></div>
-    <div class="qnav-legend">
-      <div class="legend-row"><span class="dot dot-current"></span> Aktif soru</div>
-      <div class="legend-row"><span class="dot dot-marked"></span> İşaretlendi</div>
-      <div class="legend-row"><span class="dot dot-pending"></span> Bekliyor</div>
-    </div>
-  </aside>
-
+<div class="test-runner test-runner-student">
   <main class="test-main">
     <div class="test-topbar">
       <div class="test-topbar-left">
@@ -70,7 +57,14 @@ $payloadQuestions = [];
 foreach ($questions as $q) {
     $payloadQuestions[] = [
         'id' => (int)$q['id'],
+        'category_id' => (int)$q['category_id'],
         'category' => $q['category_name'] ?? 'Diğer',
+        'category_description' => $q['category_description'] ?? null,
+        'category_audio' => $q['category_audio'] ? [
+            'kind' => 'audio',
+            'url' => '/media/' . (int)$q['category_audio']['id'],
+            'name' => $q['category_audio']['original_name'],
+        ] : null,
         'prompt' => $q['prompt'],
         'prompt_media' => $q['prompt_media'] ? [
             'kind' => $q['prompt_media']['kind'],
@@ -95,6 +89,7 @@ echo json_encode([
     'serverTimings' => $serverTimings,
     'remainingSeconds' => $remainingSeconds,
     'csrf' => csrfToken(),
+    'autoAdvance' => true,
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
