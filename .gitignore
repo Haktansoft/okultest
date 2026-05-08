@@ -1,0 +1,28 @@
+# Ortam dosyaları (her sunucuda farklı, hassas bilgi içerir)
+.env
+.env.local
+.env.production
+
+# Composer
+/vendor/
+
+# Yüklenen medya (sunucuda canlı veri)
+/storage/uploads/images/*
+/storage/uploads/audios/*
+/storage/uploads/videos/*
+!/storage/uploads/images/.gitkeep
+!/storage/uploads/audios/.gitkeep
+!/storage/uploads/videos/.gitkeep
+
+# Geçici / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test/playwright çıktıları
+.playwright-mcp/
+
+# Yerel sunucu logları
+*.log
