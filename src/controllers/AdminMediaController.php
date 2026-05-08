@@ -34,10 +34,30 @@ class AdminMediaController {
         $me = requireRole('admin');
         $kind = $_GET['kind'] ?? 'image';
         if (!in_array($kind, ['image','audio','video'], true)) $kind = 'image';
-        $st = db()->prepare("SELECT * FROM media WHERE kind=? ORDER BY id DESC LIMIT 200");
+
+        $perPage = 60;
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $offset = ($page - 1) * $perPage;
+
+        $cst = db()->prepare("SELECT COUNT(*) FROM media WHERE kind=?");
+        $cst->execute([$kind]);
+        $total = (int)$cst->fetchColumn();
+        $totalPages = max(1, (int)ceil($total / $perPage));
+        if ($page > $totalPages) { $page = $totalPages; $offset = ($page - 1) * $perPage; }
+
+        $st = db()->prepare("SELECT * FROM media WHERE kind=? ORDER BY id DESC LIMIT $perPage OFFSET $offset");
         $st->execute([$kind]);
         $items = $st->fetchAll();
-        view('admin/media/index', ['title' => 'Medya', 'me' => $me, 'kind' => $kind, 'items' => $items]);
+
+        $counts = ['image'=>0, 'audio'=>0, 'video'=>0];
+        foreach (db()->query("SELECT kind, COUNT(*) c FROM media GROUP BY kind") as $r) {
+            $counts[$r['kind']] = (int)$r['c'];
+        }
+
+        view('admin/media/index', [
+            'title' => 'Medya', 'me' => $me, 'kind' => $kind, 'items' => $items,
+            'page' => $page, 'totalPages' => $totalPages, 'total' => $total, 'counts' => $counts,
+        ]);
     }
 
     /** JSON medya listesi (soru formundaki seçici için) */
@@ -53,10 +73,20 @@ class AdminMediaController {
             $sql .= " AND original_name LIKE ?";
             $params[] = '%' . $q . '%';
         }
-        $sql .= " ORDER BY id DESC LIMIT 300";
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 60;
+        $offset = ($page - 1) * $perPage;
+        $sql .= " ORDER BY id DESC LIMIT $perPage OFFSET $offset";
         $st = db()->prepare($sql);
         $st->execute($params);
         $rows = $st->fetchAll();
+
+        $countSql = "SELECT COUNT(*) FROM media WHERE kind = ?";
+        $countParams = [$kind];
+        if ($q !== '') { $countSql .= " AND original_name LIKE ?"; $countParams[] = '%' . $q . '%'; }
+        $cst = db()->prepare($countSql);
+        $cst->execute($countParams);
+        $total = (int)$cst->fetchColumn();
 
         // Toplam sayılar (sekme rozetleri için)
         $counts = [];
@@ -74,7 +104,15 @@ class AdminMediaController {
             'url'   => '/media/' . (int)$m['id'],
         ], $rows);
 
-        \App\json(['ok' => true, 'items' => $items, 'counts' => $counts]);
+        \App\json([
+            'ok' => true,
+            'items' => $items,
+            'counts' => $counts,
+            'page' => $page,
+            'perPage' => $perPage,
+            'total' => $total,
+            'hasMore' => ($offset + count($items)) < $total,
+        ]);
     }
 
     public static function upload(): void {

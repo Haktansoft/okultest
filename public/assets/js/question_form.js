@@ -191,12 +191,12 @@
     tabs.forEach(x => x.classList.toggle('active', x === t));
     pickedItem = null;
     refreshConfirm();
-    loadMedia();
+    loadMedia(true);
   }));
 
   search.addEventListener('input', () => {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(loadMedia, 250);
+    searchTimer = setTimeout(() => loadMedia(true), 250);
   });
 
   confirmBtn.addEventListener('click', () => {
@@ -205,41 +205,66 @@
     getModal().hide();
   });
 
+  let currentPage = 1;
+  let hasMore = false;
+
   function openPicker() {
     pickedItem = null;
     refreshConfirm();
     search.value = '';
     currentKind = 'image';
     tabs.forEach(t => t.classList.toggle('active', t.dataset.kind === currentKind));
-    loadMedia();
+    loadMedia(true);
     getModal().show();
     setTimeout(() => search.focus(), 200);
   }
 
-  async function loadMedia() {
-    grid.innerHTML = '';
-    empty.classList.add('d-none');
+  function ensureMoreBtn() {
+    let btn = document.getElementById('mp-more');
+    if (btn) return btn;
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'mp-more';
+    btn.className = 'btn btn-outline-secondary btn-sm w-100 mt-3 d-none';
+    btn.textContent = 'Daha fazla yükle';
+    btn.addEventListener('click', () => loadMedia(false));
+    grid.parentNode.appendChild(btn);
+    return btn;
+  }
+
+  async function loadMedia(reset) {
+    const moreBtn = ensureMoreBtn();
+    if (reset) {
+      grid.innerHTML = '';
+      currentPage = 1;
+      empty.classList.add('d-none');
+      moreBtn.classList.add('d-none');
+    } else {
+      currentPage++;
+    }
     loading.classList.remove('d-none');
     try {
-      const url = `/admin/media.json?kind=${encodeURIComponent(currentKind)}&q=${encodeURIComponent(search.value || '')}`;
+      const url = `/admin/media.json?kind=${encodeURIComponent(currentKind)}&q=${encodeURIComponent(search.value || '')}&page=${currentPage}`;
       const res = await fetch(url, { credentials: 'same-origin' });
       const data = await res.json();
       loading.classList.add('d-none');
 
-      // Sekme rozetleri
       document.querySelectorAll('.mp-count').forEach(span => {
         const k = span.dataset.kind;
         span.textContent = (data.counts?.[k] ?? 0);
       });
 
-      if (!data.items || !data.items.length) {
+      if (reset && (!data.items || !data.items.length)) {
         empty.classList.remove('d-none');
+        moreBtn.classList.add('d-none');
         return;
       }
-      data.items.forEach(it => grid.appendChild(buildCard(it)));
+      (data.items || []).forEach(it => grid.appendChild(buildCard(it)));
+      hasMore = !!data.hasMore;
+      moreBtn.classList.toggle('d-none', !hasMore);
     } catch (e) {
       loading.classList.add('d-none');
-      grid.innerHTML = '<div class="text-danger small p-2">Yüklenemedi.</div>';
+      if (reset) grid.innerHTML = '<div class="text-danger small p-2">Yüklenemedi.</div>';
     }
   }
 
