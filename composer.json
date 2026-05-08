@@ -19,6 +19,9 @@
     ]
   },
   "config": {
+    "platform": {
+      "php": "7.4.33"
+    },
     "allow-plugins": {
       "php-http/discovery": true
     }
