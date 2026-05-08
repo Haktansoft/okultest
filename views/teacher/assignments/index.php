@@ -41,6 +41,9 @@ $statusBadge = [
               <a class="btn btn-sm btn-primary" href="/teacher/assignments/<?= (int)$i['id'] ?>/bulk" title="Toplu yanıt gir">
                 <i class="bi bi-input-cursor-text"></i> Toplu gir
               </a>
+              <a class="btn btn-sm btn-success" href="/teacher/assignments/<?= (int)$i['id'] ?>/run" title="Öğrenci ekranı gibi çözdür">
+                <i class="bi bi-play-circle"></i> Öğrenci gibi çöz
+              </a>
             <?php endif; ?>
             <?php if (in_array($i['status'], ['completed','needs_physical'], true)): ?>
               <a class="btn btn-sm btn-outline-primary" href="/teacher/results/<?= (int)$i['id'] ?>">Sonuç</a>

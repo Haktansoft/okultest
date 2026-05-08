@@ -135,6 +135,32 @@ class TeacherAssignmentController {
         redirect('/teacher/assignments');
     }
 
+    /** Öğrenci gibi çöz — testi başlatır (gerekirse) ve öğrenci runner'ına yönlendirir. */
+    public static function runAsStudent(string $id): void {
+        $me = requireRole('teacher', 'admin');
+        if (!self::canTouchAssignment((int)$id, $me)) {
+            flash('err', 'Yetki yok.'); redirect('/teacher/assignments');
+        }
+        $pdo = db();
+        $st = $pdo->prepare("SELECT * FROM test_assignments WHERE id=?");
+        $st->execute([$id]);
+        $a = $st->fetch();
+        if (!$a) { flash('err', 'Atama bulunamadı.'); redirect('/teacher/assignments'); }
+
+        if (in_array($a['status'], ['completed','needs_physical'], true)) {
+            flash('err', 'Bu test tamamlanmış. Yeniden çözmek için önce sıfırla.');
+            redirect('/teacher/assignments');
+        }
+
+        if ($a['status'] === 'pending') {
+            $pdo->prepare("UPDATE test_assignments SET status='in_progress', mode='per_question', started_at=COALESCE(started_at, NOW()) WHERE id=?")
+                ->execute([$id]);
+            $pdo->prepare("INSERT INTO attempt_events (assignment_id, event_type, payload) VALUES (?, 'start', ?)")
+                ->execute([$id, json_encode(['mode' => 'per_question', 'by' => 'teacher_proxy'], JSON_UNESCAPED_UNICODE)]);
+        }
+        redirect('/student/tests/' . (int)$id . '/run');
+    }
+
     /** Öğrenci adına toplu yanıt giriş ekranı */
     public static function bulkForm(string $id): void {
         $me = requireRole('teacher', 'admin');

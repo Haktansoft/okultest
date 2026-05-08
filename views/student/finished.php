@@ -11,9 +11,16 @@
       <strong>Test tamamlanmıştır, teşekkür ederiz.</strong>
     </p>
     <div class="finish-actions">
-      <a href="/student" class="btn btn-primary btn-finish-cta">
-        <i class="bi bi-arrow-left"></i> Testlerime dön
-      </a>
+      <?php $role = $me['role'] ?? 'student'; ?>
+      <?php if ($role === 'student'): ?>
+        <a href="/student" class="btn btn-primary btn-finish-cta">
+          <i class="bi bi-arrow-left"></i> Testlerime dön
+        </a>
+      <?php else: ?>
+        <a href="/teacher/assignments" class="btn btn-primary btn-finish-cta">
+          <i class="bi bi-arrow-left"></i> Atamalara dön
+        </a>
+      <?php endif; ?>
     </div>
   </div>
 </div>

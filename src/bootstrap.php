@@ -153,6 +153,7 @@ $r->post('/teacher/assignments/{id}/delete', ['App\\Controllers\\TeacherAssignme
 $r->post('/teacher/assignments/{id}/reset',  ['App\\Controllers\\TeacherAssignmentController', 'reset']);
 $r->get ('/teacher/assignments/{id}/bulk',   ['App\\Controllers\\TeacherAssignmentController', 'bulkForm']);
 $r->post('/teacher/assignments/{id}/bulk',   ['App\\Controllers\\TeacherAssignmentController', 'bulkSave']);
+$r->get ('/teacher/assignments/{id}/run',    ['App\\Controllers\\TeacherAssignmentController', 'runAsStudent']);
 
 $r->get ('/teacher/results',                 ['App\\Controllers\\TeacherResultController', 'index']);
 $r->get ('/teacher/results/{id}',            ['App\\Controllers\\TeacherResultController', 'show']);

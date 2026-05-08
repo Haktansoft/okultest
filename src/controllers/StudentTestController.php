@@ -7,9 +7,9 @@ use function App\{db, e, flash, json, redirect, requireRole, view, recomputeScor
 
 class StudentTestController {
     public static function intro(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
-        if (!$a) { flash('err', 'Test bulunamadı.'); redirect('/student'); }
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
+        if (!$a) { flash('err', 'Test bulunamadı.'); redirect(self::homeFor($me)); }
         if (in_array($a['status'], ['completed', 'needs_physical'], true)) {
             redirect('/student/tests/' . (int)$id . '/finished');
         }
@@ -37,9 +37,9 @@ class StudentTestController {
     }
 
     public static function start(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
-        if (!$a) { flash('err', 'Test bulunamadı.'); redirect('/student'); }
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
+        if (!$a) { flash('err', 'Test bulunamadı.'); redirect(self::homeFor($me)); }
         if (in_array($a['status'], ['completed', 'needs_physical'], true)) {
             redirect('/student/tests/' . (int)$id . '/finished');
         }
@@ -58,9 +58,9 @@ class StudentTestController {
     }
 
     public static function run(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
-        if (!$a) { flash('err', 'Test bulunamadı.'); redirect('/student'); }
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
+        if (!$a) { flash('err', 'Test bulunamadı.'); redirect(self::homeFor($me)); }
         if ($a['status'] !== 'in_progress') {
             redirect('/student/tests/' . (int)$id . '/' . (in_array($a['status'], ['completed','needs_physical'], true) ? 'finished' : 'intro'));
         }
@@ -79,8 +79,8 @@ class StudentTestController {
     }
 
     public static function autosave(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
         if (!$a) json(['ok'=>false, 'error'=>'not_found'], 404);
         if ($a['status'] !== 'in_progress') json(['ok'=>false, 'error'=>'not_active'], 409);
 
@@ -135,8 +135,8 @@ class StudentTestController {
     }
 
     public static function logEvent(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
         if (!$a) json(['ok'=>false], 404);
         $raw = file_get_contents('php://input') ?: '';
         $body = json_decode($raw, true) ?: $_POST;
@@ -151,9 +151,9 @@ class StudentTestController {
     }
 
     public static function submit(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
-        if (!$a) { flash('err', 'Test bulunamadı.'); redirect('/student'); }
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
+        if (!$a) { flash('err', 'Test bulunamadı.'); redirect(self::homeFor($me)); }
         if ($a['status'] !== 'in_progress') redirect('/student/tests/' . (int)$id . '/finished');
 
         // Önce final autosave (varsa)
@@ -209,9 +209,9 @@ class StudentTestController {
     }
 
     public static function finished(string $id): void {
-        $me = requireRole('student');
-        $a = self::loadMine((int)$id, (int)$me['id']);
-        if (!$a) { flash('err', 'Test bulunamadı.'); redirect('/student'); }
+        $me = requireRole('student', 'teacher', 'admin');
+        $a = self::loadAccessible((int)$id, $me);
+        if (!$a) { flash('err', 'Test bulunamadı.'); redirect(self::homeFor($me)); }
         $st = db()->prepare("SELECT title FROM tests WHERE id=?");
         $st->execute([$a['test_id']]);
         $test = $st->fetch();
@@ -223,6 +223,32 @@ class StudentTestController {
         $st->execute([$assignmentId, $studentId]);
         $a = $st->fetch();
         return $a ?: null;
+    }
+
+    /** Öğrenci kendi atamasını, öğretmen kendi kampüsündeki öğrencinin atamasını, admin her atamayı açabilir. */
+    private static function loadAccessible(int $assignmentId, array $me): ?array {
+        $st = db()->prepare("SELECT * FROM test_assignments WHERE id=?");
+        $st->execute([$assignmentId]);
+        $a = $st->fetch();
+        if (!$a) return null;
+        if ($me['role'] === 'admin') return $a;
+        if ($me['role'] === 'student') {
+            return ((int)$a['student_id'] === (int)$me['id']) ? $a : null;
+        }
+        if ($me['role'] === 'teacher') {
+            $sst = db()->prepare("SELECT campus_id FROM users WHERE id=?");
+            $sst->execute([(int)$a['student_id']]);
+            $sCampus = (int)$sst->fetchColumn();
+            $myCampus = (int)($me['campus_id'] ?? 0);
+            return ($sCampus > 0 && $sCampus === $myCampus) ? $a : null;
+        }
+        return null;
+    }
+
+    private static function homeFor(array $me): string {
+        if ($me['role'] === 'admin') return '/admin';
+        if ($me['role'] === 'teacher') return '/teacher/assignments';
+        return '/student';
     }
 
     private static function loadQuestions(int $assignmentId, int $testId): array {
