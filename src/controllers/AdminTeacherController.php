@@ -22,18 +22,21 @@ class AdminTeacherController {
 
     public static function create(): void {
         $me = requireRole('admin');
-        $name  = trim((string)($_POST['full_name'] ?? ''));
-        $email = trim((string)($_POST['email'] ?? ''));
-        $pass  = (string)($_POST['password'] ?? '');
-        if ($name === '' || $email === '' || strlen($pass) < 6) {
-            flash('err', 'Tüm alanlar gerekli, şifre en az 6 karakter.');
+        $name = trim((string)($_POST['full_name'] ?? ''));
+        $pass = trim((string)($_POST['password'] ?? ''));
+        if ($name === '' || strlen($pass) < 4) {
+            flash('err', 'Ad-soyad ve şifre (en az 4 karakter) gerekli.');
+            redirect('/admin/teachers/new');
+        }
+        if (self::passwordExists($pass)) {
+            flash('err', 'Bu şifre başka bir kullanıcı tarafından kullanılıyor. Farklı bir şifre seç.');
             redirect('/admin/teachers/new');
         }
         try {
-            $st = db()->prepare("INSERT INTO users (role, full_name, email, password_hash, is_active, created_by) VALUES ('teacher', ?, ?, ?, 1, ?)");
-            $st->execute([$name, $email, password_hash($pass, PASSWORD_BCRYPT), $me['id']]);
+            $st = db()->prepare("INSERT INTO users (role, full_name, password, is_active, created_by) VALUES ('teacher', ?, ?, 1, ?)");
+            $st->execute([$name, $pass, $me['id']]);
         } catch (\PDOException $ex) {
-            flash('err', 'Bu e-posta zaten kayıtlı.');
+            flash('err', 'Kayıt yapılamadı (şifre zaten kullanılıyor olabilir).');
             redirect('/admin/teachers/new');
         }
         flash('ok', 'Öğretmen eklendi.');
@@ -42,11 +45,15 @@ class AdminTeacherController {
 
     public static function reset(string $id): void {
         requireRole('admin');
-        $pass = (string)($_POST['password'] ?? '');
-        if (strlen($pass) < 6) { flash('err', 'Şifre en az 6 karakter.'); redirect('/admin/teachers'); }
-        $st = db()->prepare("UPDATE users SET password_hash=? WHERE id=? AND role='teacher'");
-        $st->execute([password_hash($pass, PASSWORD_BCRYPT), $id]);
-        flash('ok', 'Şifre sıfırlandı.');
+        $pass = trim((string)($_POST['password'] ?? ''));
+        if (strlen($pass) < 4) { flash('err', 'Şifre en az 4 karakter.'); redirect('/admin/teachers'); }
+        if (self::passwordExists($pass, (int)$id)) {
+            flash('err', 'Bu şifre başka bir kullanıcıda var.');
+            redirect('/admin/teachers');
+        }
+        $st = db()->prepare("UPDATE users SET password=? WHERE id=? AND role='teacher'");
+        $st->execute([$pass, $id]);
+        flash('ok', 'Şifre güncellendi.');
         redirect('/admin/teachers');
     }
 
@@ -56,5 +63,11 @@ class AdminTeacherController {
         $st->execute([$id]);
         flash('ok', 'Durum güncellendi.');
         redirect('/admin/teachers');
+    }
+
+    private static function passwordExists(string $pass, int $excludeId = 0): bool {
+        $st = db()->prepare("SELECT id FROM users WHERE password = ? AND id <> ? LIMIT 1");
+        $st->execute([$pass, $excludeId]);
+        return (bool)$st->fetchColumn();
     }
 }

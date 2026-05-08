@@ -20,34 +20,29 @@ if ((int)$existing > 0) {
     }
 }
 
-echo "Admin e-posta [admin@local]: ";
-$email = trim((string)fgets(STDIN));
-if ($email === '') $email = 'admin@local';
-
 echo "Admin tam ad [Ana Yönetici]: ";
 $name = trim((string)fgets(STDIN));
 if ($name === '') $name = 'Ana Yönetici';
 
-echo "Şifre (en az 6 karakter): ";
-// Echo'yu kapat
-if (function_exists('shell_exec')) {
-    shell_exec('stty -echo');
-}
+echo "Şifre (en az 4 karakter, sistemde benzersiz olmalı): ";
+if (function_exists('shell_exec')) { shell_exec('stty -echo'); }
 $pass = trim((string)fgets(STDIN));
-if (function_exists('shell_exec')) {
-    shell_exec('stty echo');
-}
+if (function_exists('shell_exec')) { shell_exec('stty echo'); }
 echo "\n";
 
-if (strlen($pass) < 6) {
+if (strlen($pass) < 4) {
     fwrite(STDERR, "Şifre çok kısa.\n");
     exit(1);
 }
 
-$hash = password_hash($pass, PASSWORD_BCRYPT);
+$dup = $pdo->prepare("SELECT id FROM users WHERE password = ? LIMIT 1");
+$dup->execute([$pass]);
+if ($dup->fetch()) {
+    fwrite(STDERR, "Bu şifre zaten başka bir kullanıcıda var. Farklı bir şifre seç.\n");
+    exit(1);
+}
 
-$stmt = $pdo->prepare("INSERT INTO users (role, full_name, email, password_hash, is_active) VALUES ('admin', ?, ?, ?, 1)
-ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), password_hash = VALUES(password_hash), is_active = 1, role = 'admin'");
-$stmt->execute([$name, $email, $hash]);
+$stmt = $pdo->prepare("INSERT INTO users (role, full_name, password, is_active) VALUES ('admin', ?, ?, 1)");
+$stmt->execute([$name, $pass]);
 
-echo "Tamam. {$email} ile giriş yapabilirsin.\n";
+echo "Tamam. \"{$name}\" admin olarak eklendi. Bu şifreyle giriş yapabilirsin: {$pass}\n";

@@ -21,7 +21,7 @@ function user(): ?array {
     if (!isset($_SESSION['user_id'])) return null;
     static $cache = null;
     if ($cache !== null && $cache['id'] === (int)$_SESSION['user_id']) return $cache;
-    $stmt = db()->prepare("SELECT id, role, full_name, email, is_active FROM users WHERE id = ? LIMIT 1");
+    $stmt = db()->prepare("SELECT id, role, full_name, is_active FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([$_SESSION['user_id']]);
     $u = $stmt->fetch();
     if (!$u || !$u['is_active']) {
@@ -31,12 +31,11 @@ function user(): ?array {
     return $cache = $u;
 }
 
-function login(string $email, string $password): ?array {
-    $stmt = db()->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1");
-    $stmt->execute([$email]);
+function login(string $password): ?array {
+    $stmt = db()->prepare("SELECT * FROM users WHERE password = ? AND is_active = 1 LIMIT 1");
+    $stmt->execute([$password]);
     $u = $stmt->fetch();
     if (!$u) return null;
-    if (!password_verify($password, $u['password_hash'])) return null;
     startSession();
     session_regenerate_id(true);
     $_SESSION['user_id'] = (int)$u['id'];

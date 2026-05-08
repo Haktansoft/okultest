@@ -3,8 +3,9 @@
 .env.local
 .env.production
 
-# Composer
-/vendor/
+# Composer — paylaşımlı hosting'de SSH/composer yoksa, vendor'ı tracked yapabilirsin.
+# Şu an tracked: deploy'da otomatik gelir.
+# /vendor/
 
 # Yüklenen medya (sunucuda canlı veri)
 /storage/uploads/images/*

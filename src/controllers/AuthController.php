@@ -16,15 +16,14 @@ class AuthController {
     }
 
     public static function login(): void {
-        $email = trim((string)($_POST['email'] ?? ''));
-        $pass  = (string)($_POST['password'] ?? '');
-        if ($email === '' || $pass === '') {
-            flash('login_error', 'E-posta ve şifre gerekli.');
+        $pass = (string)($_POST['password'] ?? '');
+        if ($pass === '') {
+            flash('login_error', 'Şifre gerekli.');
             redirect('/login');
         }
-        $u = authLogin($email, $pass);
+        $u = authLogin($pass);
         if (!$u) {
-            flash('login_error', 'E-posta veya şifre hatalı.');
+            flash('login_error', 'Şifre hatalı.');
             redirect('/login');
         }
         redirect('/');

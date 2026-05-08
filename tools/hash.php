@@ -1,8 +1,5 @@
 <?php
-// Bcrypt şifre üretici. Kullanım: php tools/hash.php "yeni-sifre"
-$pwd = $argv[1] ?? null;
-if (!$pwd) {
-    fwrite(STDERR, "Kullanım: php tools/hash.php \"sifre\"\n");
-    exit(1);
-}
-echo password_hash($pwd, PASSWORD_BCRYPT), "\n";
+// Kullanım dışı. Artık şifreler düz metin saklanıyor; hash gerekmiyor.
+fwrite(STDERR, "Bu araç artık kullanılmıyor. Şifreler düz metin saklanıyor.\n");
+fwrite(STDERR, "Kullanıcı eklemek için admin paneli (/admin/teachers veya /teacher/students) ya da `php tools/install.php`.\n");
+exit(1);

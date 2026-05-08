@@ -87,7 +87,7 @@ class TeacherResultController {
         if ($teacherId === null) {
             $st = $pdo->prepare("
                 SELECT ta.*, t.title AS test_title, t.description AS test_description,
-                       u.full_name AS student_name, u.email AS student_email
+                       u.full_name AS student_name
                 FROM test_assignments ta
                 JOIN tests t ON t.id = ta.test_id
                 JOIN users u ON u.id = ta.student_id
@@ -97,7 +97,7 @@ class TeacherResultController {
         } else {
             $st = $pdo->prepare("
                 SELECT ta.*, t.title AS test_title, t.description AS test_description,
-                       u.full_name AS student_name, u.email AS student_email
+                       u.full_name AS student_name
                 FROM test_assignments ta
                 JOIN tests t ON t.id = ta.test_id
                 JOIN users u ON u.id = ta.student_id
