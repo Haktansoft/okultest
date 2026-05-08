@@ -127,6 +127,7 @@ echo json_encode([
     'serverTimings' => [],
     'remainingSeconds' => null,
     'csrf' => csrfToken(),
+    'autoAdvance' => true,
     'endpoints' => [
         'submit' => '/teacher/assignments/' . (int)$a['id'] . '/bulk',
     ],

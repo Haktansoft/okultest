@@ -112,11 +112,13 @@ foreach ($questions as $q) {
 echo json_encode([
     'mode' => 'teacher_bulk',
     'assignment_id' => (int)$a['id'],
+    'attempt_token' => !empty($a['started_at']) ? strtotime($a['started_at']) : 0,
     'questions' => $payloadQuestions,
     'serverAnswers' => $serverAnswers,
     'serverTimings' => [],
     'remainingSeconds' => null,
     'csrf' => csrfToken(),
+    'autoAdvance' => true,
     'endpoints' => [
         'submit' => '/teacher/physical/' . (int)$a['id'],
     ],

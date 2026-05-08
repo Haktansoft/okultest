@@ -20,7 +20,7 @@
   } catch {}
   const BLANK = '__blank__';
   const LETTERS = ['A','B','C','D','E','F','G','H','I','J'];
-  const AUTO_ADVANCE = !!D.autoAdvance && !isTeacher;
+  const AUTO_ADVANCE = !!D.autoAdvance;
   const TRANSITION_MS = 260;
 
   const container = document.getElementById('question-container');
@@ -396,6 +396,8 @@
     const isLast = currentIndex === D.questions.length - 1;
     advanceTimer = setTimeout(() => {
       if (isLast) {
+        // Öğretmen son soruda otomatik bitirmesin — kaydet butonuna kendi bassın
+        if (isTeacher) return;
         const allMarked = D.questions.every(qq => marked[qq.id]);
         if (allMarked) finishTest(true);
       } else {
@@ -551,51 +553,96 @@
 
   // Hata sonrası otomatik yeniden deneme (exponential backoff)
   let retryTimer = null;
+  let countdownTimer = null;
   let retryDelayMs = 3000;
   const RETRY_MAX_MS = 30000;
+  const FETCH_TIMEOUT_MS = 12000;
   let sessionExpired = false;
+  let saveInFlight = false;
 
-  function scheduleRetry() {
-    if (retryTimer || sessionExpired) return;
+  function clearCountdown() {
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  }
+
+  function scheduleRetry(reasonHtml) {
+    if (sessionExpired) return;
+    if (retryTimer) return;
+    let secondsLeft = Math.max(1, Math.round(retryDelayMs / 1000));
+    const tick = () => {
+      if (saveInFlight || sessionExpired) return; // başka bir kaydetme çalışıyor
+      saveStatus.innerHTML = `${reasonHtml} — ${secondsLeft}s sonra yeniden deneniyor`;
+      secondsLeft--;
+    };
+    tick();
+    clearCountdown();
+    countdownTimer = setInterval(tick, 1000);
     retryTimer = setTimeout(() => {
       retryTimer = null;
+      clearCountdown();
       if (dirty) saveNow();
     }, retryDelayMs);
     retryDelayMs = Math.min(Math.round(retryDelayMs * 1.5), RETRY_MAX_MS);
   }
-  function resetRetry() { retryDelayMs = 3000; }
+  function resetRetry() {
+    retryDelayMs = 3000;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    clearCountdown();
+  }
 
   async function saveNow(isFinal = false) {
     if (isTeacher) return;
     if (!dirty && !isFinal) return;
-    if (sessionExpired && !isFinal) return; // oturum gitti — sayfa yenilemeden bir şey yapamayız
+    if (sessionExpired && !isFinal) return;
+    if (saveInFlight) return; // eşzamanlı çağrıları engelle — bağlantı havuzunu tıkamasın
+    saveInFlight = true;
+    // Bekleyen retry varsa iptal et — şimdi yeni bir deneme yapıyoruz
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    clearCountdown();
     saveStatus.innerHTML = '<i class="bi bi-arrow-repeat"></i> Kaydediliyor';
+
+    const ac = new AbortController();
+    const timeoutId = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
+
     try {
       const url = isFinal
         ? `/student/tests/${D.assignment_id}/submit`
         : `/student/tests/${D.assignment_id}/autosave`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': D.csrf, 'Accept': isFinal ? 'application/json' : '' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': D.csrf,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({ answers: answersForServer(), timings }),
-        keepalive: true,
+        signal: ac.signal,
+        cache: 'no-store',
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         dirty = false;
         resetRetry();
         saveStatus.innerHTML = '<i class="bi bi-check2"></i> Kaydedildi';
         setTimeout(() => { if (!dirty) saveStatus.textContent = ''; }, 1500);
-      } else if (res.status === 419 || res.status === 401 || res.status === 403) {
-        // Oturum / CSRF süresi doldu
+      } else if (res.status === 419 || res.status === 401) {
         sessionExpired = true;
+        clearCountdown();
         saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Oturum süresi doldu — sayfayı yenileyin';
       } else {
-        saveStatus.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Kaydedilemedi (${res.status}) — yeniden deneniyor`;
-        if (!isFinal) scheduleRetry();
+        const reason = `<i class="bi bi-exclamation-triangle"></i> Kaydedilemedi (${res.status})`;
+        saveStatus.innerHTML = reason;
+        if (!isFinal) scheduleRetry(reason);
       }
-    } catch {
-      saveStatus.innerHTML = '<i class="bi bi-wifi-off"></i> Bağlantı hatası — yeniden deneniyor';
-      if (!isFinal) scheduleRetry();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      const why = (e && e.name === 'AbortError') ? 'zaman aşımı' : 'bağlantı hatası';
+      const reason = `<i class="bi bi-wifi-off"></i> ${why}`;
+      saveStatus.innerHTML = reason;
+      if (!isFinal) scheduleRetry(reason);
+    } finally {
+      saveInFlight = false;
     }
   }
 
