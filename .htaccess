@@ -1,0 +1,46 @@
+# Kök seviye .htaccess — projenin tamamı domain DocumentRoot'una yüklendiğinde
+# Yerel geliştirmede `public/.htaccess` çalışır.
+
+Options -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Hassas yolları engelle (403)
+  RewriteRule ^\.env$                                    - [F,L]
+  RewriteRule ^composer\.(json|lock)$                    - [F,L]
+  RewriteRule ^schema\.sql$                              - [F,L]
+  RewriteRule ^README\.md$                               - [F,L]
+  RewriteRule ^(src|vendor|views|storage|tools)(/|$)     - [F,L]
+
+  # /assets/* URL'leri public/assets/* dosyalarına yönlendir (URL korunsun)
+  RewriteRule ^assets/(.*)$                              public/assets/$1 [L]
+
+  # Var olan diğer dosya/dizinler doğrudan
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^                                          - [L]
+
+  # Diğer her istek kök index.php'ye
+  RewriteRule ^                                          index.php [L]
+</IfModule>
+
+# Gizli dosyalar (.env, .git, .htaccess vb.)
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# Composer ve şema dosyalarına da kaza ile erişim olmasın
+<FilesMatch "(composer\.(json|lock)|schema\.sql|README\.md)$">
+  Require all denied
+</FilesMatch>
+
+# Büyük yüklemeler için (cPanel "Select PHP Version → Options" da gerekir)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 512M
+  php_value post_max_size 512M
+  php_value memory_limit 256M
+  php_value max_execution_time 300
+</IfModule>
