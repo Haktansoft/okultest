@@ -84,6 +84,7 @@ foreach ($questions as $q) {
 }
 echo json_encode([
     'assignment_id' => (int)$assignment['id'],
+    'attempt_token' => !empty($assignment['started_at']) ? strtotime($assignment['started_at']) : 0,
     'questions' => $payloadQuestions,
     'serverAnswers' => $serverAnswers,
     'serverTimings' => $serverTimings,

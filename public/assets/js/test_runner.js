@@ -3,9 +3,21 @@
   if (!D) return;
   const MODE = D.mode || 'student';
   const isTeacher = MODE === 'teacher_bulk';
-  const STORE_KEY = isTeacher
+  // attempt_token: started_at zaman damgası. Sıfırlandığında değişir, eski yerel veriyi otomatik geçersiz kılar.
+  const ATTEMPT_TOKEN = D.attempt_token || 0;
+  const KEY_PREFIX = isTeacher
     ? `teacher:${(D.endpoints && D.endpoints.submit) || D.assignment_id}`
     : `attempt:${D.assignment_id}`;
+  const STORE_KEY = `${KEY_PREFIX}:${ATTEMPT_TOKEN}`;
+  // Aynı atamanın eski (farklı token'lı) localStorage anahtarlarını temizle
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(KEY_PREFIX + ':') && k !== STORE_KEY) localStorage.removeItem(k);
+      // Eski format (token'sız) anahtarları da temizle
+      if (k === KEY_PREFIX) localStorage.removeItem(k);
+    }
+  } catch {}
   const BLANK = '__blank__';
   const LETTERS = ['A','B','C','D','E','F','G','H','I','J'];
   const AUTO_ADVANCE = !!D.autoAdvance && !isTeacher;
