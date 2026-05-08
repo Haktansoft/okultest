@@ -25,7 +25,7 @@ function user(): ?array {
     if (!isset($_SESSION['user_id'])) return null;
     static $cache = null;
     if ($cache !== null && $cache['id'] === (int)$_SESSION['user_id']) return $cache;
-    $stmt = db()->prepare("SELECT id, role, full_name, is_active FROM users WHERE id = ? LIMIT 1");
+    $stmt = db()->prepare("SELECT id, role, full_name, is_active, campus_id, classroom_id FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([$_SESSION['user_id']]);
     $u = $stmt->fetch();
     if (!$u || !$u['is_active']) {

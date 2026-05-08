@@ -86,11 +86,26 @@ $r->get ('/admin/tests/{id}/questions',         ['App\\Controllers\\AdminTestCon
 $r->post('/admin/tests/{id}/questions',         ['App\\Controllers\\AdminTestController', 'saveQuestions']);
 $r->get ('/admin/tests/{id}/pdf',               ['App\\Controllers\\AdminTestController', 'pdf']);
 
+$r->get ('/admin/institutions',                 ['App\\Controllers\\AdminInstitutionController', 'index']);
+$r->get ('/admin/institutions/new',             ['App\\Controllers\\AdminInstitutionController', 'createForm']);
+$r->post('/admin/institutions',                 ['App\\Controllers\\AdminInstitutionController', 'create']);
+$r->get ('/admin/institutions/{id}/edit',       ['App\\Controllers\\AdminInstitutionController', 'editForm']);
+$r->post('/admin/institutions/{id}/update',     ['App\\Controllers\\AdminInstitutionController', 'update']);
+$r->post('/admin/institutions/{id}/delete',     ['App\\Controllers\\AdminInstitutionController', 'delete']);
+
+$r->get ('/admin/campuses',                     ['App\\Controllers\\AdminCampusController', 'index']);
+$r->get ('/admin/campuses/new',                 ['App\\Controllers\\AdminCampusController', 'createForm']);
+$r->post('/admin/campuses',                     ['App\\Controllers\\AdminCampusController', 'create']);
+$r->get ('/admin/campuses/{id}/edit',           ['App\\Controllers\\AdminCampusController', 'editForm']);
+$r->post('/admin/campuses/{id}/update',         ['App\\Controllers\\AdminCampusController', 'update']);
+$r->post('/admin/campuses/{id}/delete',         ['App\\Controllers\\AdminCampusController', 'delete']);
+
 $r->get ('/admin/teachers',                     ['App\\Controllers\\AdminTeacherController', 'index']);
 $r->get ('/admin/teachers/new',                 ['App\\Controllers\\AdminTeacherController', 'createForm']);
 $r->post('/admin/teachers',                     ['App\\Controllers\\AdminTeacherController', 'create']);
+$r->get ('/admin/teachers/{id}/edit',           ['App\\Controllers\\AdminTeacherController', 'editForm']);
+$r->post('/admin/teachers/{id}/update',         ['App\\Controllers\\AdminTeacherController', 'update']);
 $r->post('/admin/teachers/{id}/reset',          ['App\\Controllers\\AdminTeacherController', 'reset']);
-$r->post('/admin/teachers/{id}/rename',         ['App\\Controllers\\AdminTeacherController', 'rename']);
 $r->post('/admin/teachers/{id}/toggle',         ['App\\Controllers\\AdminTeacherController', 'toggle']);
 
 // === Teacher ===
@@ -107,11 +122,19 @@ $r->get ('/teacher', function () {
     ]);
 });
 
+$r->get ('/teacher/classrooms',              ['App\\Controllers\\TeacherClassroomController', 'index']);
+$r->get ('/teacher/classrooms/new',          ['App\\Controllers\\TeacherClassroomController', 'createForm']);
+$r->post('/teacher/classrooms',              ['App\\Controllers\\TeacherClassroomController', 'create']);
+$r->get ('/teacher/classrooms/{id}/edit',    ['App\\Controllers\\TeacherClassroomController', 'editForm']);
+$r->post('/teacher/classrooms/{id}/update',  ['App\\Controllers\\TeacherClassroomController', 'update']);
+$r->post('/teacher/classrooms/{id}/delete',  ['App\\Controllers\\TeacherClassroomController', 'delete']);
+
 $r->get ('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'index']);
 $r->get ('/teacher/students/new',            ['App\\Controllers\\TeacherStudentController', 'createForm']);
 $r->post('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'create']);
 $r->get ('/teacher/students/{id}/edit',      ['App\\Controllers\\TeacherStudentController', 'editForm']);
 $r->post('/teacher/students/{id}/update',    ['App\\Controllers\\TeacherStudentController', 'update']);
+$r->post('/teacher/students/{id}/delete',    ['App\\Controllers\\TeacherStudentController', 'delete']);
 $r->post('/teacher/students/{id}/toggle',    ['App\\Controllers\\TeacherStudentController', 'toggle']);
 
 $r->get ('/teacher/assignments',             ['App\\Controllers\\TeacherAssignmentController', 'index']);

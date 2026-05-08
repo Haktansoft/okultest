@@ -8,25 +8,42 @@ use function App\{db, e, flash, redirect, requireRole, view};
 class TeacherAssignmentController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
-        // Tüm atamalar — öğretmen-öğrenci bağı yok, herkes görür
-        $items = db()->query("
+        $isAdmin = $me['role'] === 'admin';
+        $sql = "
             SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
-            JOIN users te ON te.id = ta.teacher_id
-            ORDER BY ta.id DESC
-        ")->fetchAll();
-        view('teacher/assignments/index', ['title' => 'Atamalar', 'me' => $me, 'items' => $items]);
+            JOIN users te ON te.id = ta.teacher_id";
+        $params = [];
+        if (!$isAdmin) {
+            $sql .= " WHERE u.campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
+        }
+        $sql .= " ORDER BY ta.id DESC";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        view('teacher/assignments/index', ['title' => 'Atamalar', 'me' => $me, 'items' => $st->fetchAll()]);
     }
 
     public static function createForm(): void {
         $me = requireRole('teacher', 'admin');
-        $students = db()->query("
-            SELECT id, full_name FROM users
-            WHERE role='student' AND is_active=1
-            ORDER BY full_name
-        ")->fetchAll();
+        $isAdmin = $me['role'] === 'admin';
+        if ($isAdmin) {
+            $students = db()->query("
+                SELECT id, full_name FROM users
+                WHERE role='student' AND is_active=1
+                ORDER BY full_name
+            ")->fetchAll();
+        } else {
+            $st = db()->prepare("
+                SELECT id, full_name FROM users
+                WHERE role='student' AND is_active=1 AND campus_id=?
+                ORDER BY full_name
+            ");
+            $st->execute([(int)($me['campus_id'] ?? 0)]);
+            $students = $st->fetchAll();
+        }
         $tests = db()->query("SELECT id, title FROM tests ORDER BY title")->fetchAll();
         view('teacher/assignments/form', [
             'title' => 'Yeni Atama', 'me' => $me,
@@ -36,6 +53,7 @@ class TeacherAssignmentController {
 
     public static function create(): void {
         $me = requireRole('teacher', 'admin');
+        $isAdmin = $me['role'] === 'admin';
         $testId = (int)($_POST['test_id'] ?? 0);
         $sids   = array_map('intval', (array)($_POST['student_ids'] ?? []));
         if (!$testId || !$sids) {
@@ -43,10 +61,16 @@ class TeacherAssignmentController {
             redirect('/teacher/assignments/new');
         }
 
-        // Öğrenci id'lerinin gerçekten student olduğunu doğrula
+        // Öğrenci id'lerinin gerçekten student olduğunu (ve gerekirse aynı kampüste) doğrula
         $in = implode(',', array_fill(0, count($sids), '?'));
-        $st = db()->prepare("SELECT id FROM users WHERE role='student' AND is_active=1 AND id IN ($in)");
-        $st->execute($sids);
+        $where = "role='student' AND is_active=1 AND id IN ($in)";
+        $params = $sids;
+        if (!$isAdmin) {
+            $where .= " AND campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
+        }
+        $st = db()->prepare("SELECT id FROM users WHERE $where");
+        $st->execute($params);
         $valid = array_column($st->fetchAll(), 'id');
         if (!$valid) { flash('err', 'Geçerli öğrenci yok.'); redirect('/teacher/assignments'); }
 
@@ -64,7 +88,10 @@ class TeacherAssignmentController {
     }
 
     public static function delete(string $id): void {
-        requireRole('teacher', 'admin');
+        $me = requireRole('teacher', 'admin');
+        if (!self::canTouchAssignment((int)$id, $me)) {
+            flash('err', 'Yetki yok.'); redirect('/teacher/assignments');
+        }
         $st = db()->prepare("DELETE FROM test_assignments WHERE id=? AND status IN ('pending','in_progress')");
         $st->execute([$id]);
         flash('ok', $st->rowCount() ? 'Atama silindi.' : 'Tamamlanmış atama silinemez.');
@@ -73,7 +100,10 @@ class TeacherAssignmentController {
 
     /** Atamayı tamamen sıfırla — öğrenci testi yeniden çözebilsin */
     public static function reset(string $id): void {
-        requireRole('teacher', 'admin');
+        $me = requireRole('teacher', 'admin');
+        if (!self::canTouchAssignment((int)$id, $me)) {
+            flash('err', 'Yetki yok.'); redirect('/teacher/assignments');
+        }
         $pdo = db();
         $st = $pdo->prepare("SELECT id FROM test_assignments WHERE id=?");
         $st->execute([$id]);
@@ -108,6 +138,9 @@ class TeacherAssignmentController {
     /** Öğrenci adına toplu yanıt giriş ekranı */
     public static function bulkForm(string $id): void {
         $me = requireRole('teacher', 'admin');
+        if (!self::canTouchAssignment((int)$id, $me)) {
+            flash('err', 'Yetki yok.'); redirect('/teacher/assignments');
+        }
         $data = self::loadAssignmentForBulk((int)$id);
         if (!$data) { flash('err', 'Atama bulunamadı.'); redirect('/teacher/assignments'); }
         if (!in_array($data['assignment']['status'], ['pending','in_progress'], true)) {
@@ -121,6 +154,9 @@ class TeacherAssignmentController {
 
     public static function bulkSave(string $id): void {
         $me = requireRole('teacher', 'admin');
+        if (!self::canTouchAssignment((int)$id, $me)) {
+            flash('err', 'Yetki yok.'); redirect('/teacher/assignments');
+        }
         $data = self::loadAssignmentForBulk((int)$id);
         if (!$data) { flash('err', 'Atama bulunamadı.'); redirect('/teacher/assignments'); }
         if (!in_array($data['assignment']['status'], ['pending','in_progress'], true)) {
@@ -173,6 +209,20 @@ class TeacherAssignmentController {
         }
         flash('ok', 'Yanıtlar kaydedildi.');
         redirect('/teacher/results/' . (int)$id);
+    }
+
+    private static function canTouchAssignment(int $assignmentId, array $me): bool {
+        if ($me['role'] === 'admin') return true;
+        $myCampus = (int)($me['campus_id'] ?? 0);
+        if ($myCampus <= 0) return false;
+        $st = db()->prepare("
+            SELECT u.campus_id FROM test_assignments ta
+            JOIN users u ON u.id = ta.student_id
+            WHERE ta.id=?
+        ");
+        $st->execute([$assignmentId]);
+        $cid = (int)$st->fetchColumn();
+        return $cid > 0 && $cid === $myCampus;
     }
 
     private static function loadAssignmentForBulk(int $assignmentId): ?array {

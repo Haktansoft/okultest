@@ -16,6 +16,9 @@ DROP TABLE IF EXISTS questions;
 DROP TABLE IF EXISTS media;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS teacher_students;
+DROP TABLE IF EXISTS classrooms;
+DROP TABLE IF EXISTS campuses;
+DROP TABLE IF EXISTS institutions;
 DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -27,6 +30,8 @@ CREATE TABLE users (
   tc VARCHAR(11) NULL,
   grade_level VARCHAR(20) NULL,
   section VARCHAR(20) NULL,
+  campus_id BIGINT UNSIGNED NULL,
+  classroom_id BIGINT UNSIGNED NULL,
   password VARCHAR(64) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_by BIGINT UNSIGNED NULL,
@@ -34,7 +39,41 @@ CREATE TABLE users (
   PRIMARY KEY (id),
   UNIQUE KEY uniq_users_password (password),
   UNIQUE KEY uniq_users_tc (tc),
-  KEY idx_users_role (role)
+  KEY idx_users_role (role),
+  KEY idx_users_campus (campus_id),
+  KEY idx_users_classroom (classroom_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE institutions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(150) NOT NULL,
+  logo_media_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_inst_name (name),
+  KEY idx_inst_logo (logo_media_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE campuses (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  institution_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_camp_inst (institution_id),
+  UNIQUE KEY uniq_camp_name_per_inst (institution_id, name),
+  CONSTRAINT fk_camp_inst FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE classrooms (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  campus_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_class_campus (campus_id),
+  UNIQUE KEY uniq_class_name_per_camp (campus_id, name),
+  CONSTRAINT fk_class_campus FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE teacher_students (

@@ -7,41 +7,47 @@ $navGroups = [];
 if ($role === 'admin') {
     $navGroups = [
         'Genel' => [
-            ['/admin',            'Özet',         'bi-speedometer2'],
+            ['/admin',                 'Özet',         'bi-speedometer2'],
+        ],
+        'Yapı' => [
+            ['/admin/institutions',    'Kurumlar',     'bi-building'],
+            ['/admin/campuses',        'Kampüsler',    'bi-geo-alt'],
+            ['/teacher/classrooms',    'Sınıflar',     'bi-mortarboard'],
         ],
         'İçerik' => [
-            ['/admin/categories', 'Kategoriler',  'bi-folder2'],
-            ['/admin/media',      'Medya',        'bi-collection-play'],
-            ['/admin/questions',  'Sorular',      'bi-question-circle'],
-            ['/admin/tests',      'Testler',      'bi-card-checklist'],
+            ['/admin/categories',      'Kategoriler',  'bi-folder2'],
+            ['/admin/media',           'Medya',        'bi-collection-play'],
+            ['/admin/questions',       'Sorular',      'bi-question-circle'],
+            ['/admin/tests',           'Testler',      'bi-card-checklist'],
         ],
         'Sınıf' => [
-            ['/teacher/students',    'Öğrenciler',     'bi-people'],
-            ['/teacher/assignments', 'Atamalar',       'bi-send'],
+            ['/teacher/students',      'Öğrenciler',     'bi-people'],
+            ['/teacher/assignments',   'Atamalar',       'bi-send'],
         ],
         'Sonuçlar' => [
-            ['/teacher/results',     'Sonuçlar',       'bi-clipboard-data'],
-            ['/teacher/physical',    'Fiziksel Sorular','bi-pencil-square'],
+            ['/teacher/results',       'Sonuçlar',       'bi-clipboard-data'],
+            ['/teacher/physical',      'Fiziksel Sorular','bi-pencil-square'],
         ],
         'Kullanıcılar' => [
-            ['/admin/teachers',   'Öğretmenler',  'bi-person-badge'],
+            ['/admin/teachers',        'Öğretmenler',    'bi-person-badge'],
         ],
     ];
 } elseif ($role === 'teacher') {
     $navGroups = [
         'Genel' => [
-            ['/teacher',             'Özet',           'bi-speedometer2'],
+            ['/teacher',               'Özet',           'bi-speedometer2'],
         ],
         'Sınıf' => [
-            ['/teacher/students',    'Öğrenciler',     'bi-people'],
-            ['/teacher/assignments', 'Atamalar',       'bi-send'],
+            ['/teacher/classrooms',    'Sınıflar',       'bi-mortarboard'],
+            ['/teacher/students',      'Öğrenciler',     'bi-people'],
+            ['/teacher/assignments',   'Atamalar',       'bi-send'],
         ],
         'İçerik' => [
-            ['/admin/tests',         'Testler',        'bi-card-checklist'],
+            ['/admin/tests',           'Testler',        'bi-card-checklist'],
         ],
         'Sonuçlar' => [
-            ['/teacher/results',     'Sonuçlar',       'bi-clipboard-data'],
-            ['/teacher/physical',    'Fiziksel Sorular','bi-pencil-square'],
+            ['/teacher/results',       'Sonuçlar',       'bi-clipboard-data'],
+            ['/teacher/physical',      'Fiziksel Sorular','bi-pencil-square'],
         ],
     ];
 } elseif ($role === 'student') {

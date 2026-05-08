@@ -8,18 +8,25 @@ use function App\{db, e, flash, redirect, requireRole, view, recomputeScore};
 class TeacherPhysicalController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
-        $st = db()->query("
+        $isAdmin = $me['role'] === 'admin';
+        $sql = "
             SELECT ta.id, ta.status, ta.finished_at, t.title AS test_title, u.full_name AS student_name,
-                   te.full_name AS teacher_name,
+                   te.full_name AS teacher_name, u.campus_id AS student_campus_id,
                    (SELECT COUNT(*) FROM test_questions tq JOIN questions q ON q.id=tq.question_id WHERE tq.test_id=ta.test_id AND q.is_physical=1) AS phys_total,
                    (SELECT COUNT(*) FROM physical_answers pa WHERE pa.assignment_id=ta.id) AS phys_done
             FROM test_assignments ta
             JOIN tests t ON t.id=ta.test_id
             JOIN users u ON u.id=ta.student_id
             JOIN users te ON te.id=ta.teacher_id
-            WHERE ta.status='needs_physical'
-            ORDER BY ta.finished_at DESC
-        ");
+            WHERE ta.status='needs_physical'";
+        $params = [];
+        if (!$isAdmin) {
+            $sql .= " AND u.campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
+        }
+        $sql .= " ORDER BY ta.finished_at DESC";
+        $st = db()->prepare($sql);
+        $st->execute($params);
         view('teacher/physical/index', ['title' => 'Fiziksel Sorular', 'me' => $me, 'items' => $st->fetchAll()]);
     }
 
@@ -27,6 +34,7 @@ class TeacherPhysicalController {
         $me = requireRole('teacher', 'admin');
         $data = self::loadFor((int)$id, null);
         if (!$data) { flash('err', 'Bulunamadı.'); redirect('/teacher/physical'); }
+        if (!self::canAccess($me, $data)) { flash('err', 'Yetki yok.'); redirect('/teacher/physical'); }
         $data['title'] = 'Fiziksel — ' . $data['assignment']['student_name'];
         $data['me'] = $me;
         view('teacher/physical/show', $data);
@@ -36,6 +44,7 @@ class TeacherPhysicalController {
         $me = requireRole('teacher', 'admin');
         $data = self::loadFor((int)$id, null);
         if (!$data) { flash('err', 'Bulunamadı.'); redirect('/teacher/physical'); }
+        if (!self::canAccess($me, $data)) { flash('err', 'Yetki yok.'); redirect('/teacher/physical'); }
 
         $picks = $_POST['option'] ?? [];
         if (!is_array($picks)) $picks = [];
@@ -78,11 +87,17 @@ class TeacherPhysicalController {
         redirect("/teacher/results/$id");
     }
 
+    private static function canAccess(array $me, array $data): bool {
+        if ($me['role'] === 'admin') return true;
+        $myCampus = (int)($me['campus_id'] ?? 0);
+        return $myCampus > 0 && $myCampus === (int)($data['assignment']['student_campus_id'] ?? 0);
+    }
+
     private static function loadFor(int $assignmentId, ?int $teacherId): ?array {
         $pdo = db();
         if ($teacherId === null) {
             $st = $pdo->prepare("
-                SELECT ta.*, t.title AS test_title, u.full_name AS student_name
+                SELECT ta.*, t.title AS test_title, u.full_name AS student_name, u.campus_id AS student_campus_id
                 FROM test_assignments ta
                 JOIN tests t ON t.id=ta.test_id
                 JOIN users u ON u.id=ta.student_id

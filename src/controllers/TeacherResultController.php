@@ -8,20 +8,28 @@ use function App\{db, e, flash, redirect, requireRole, view, formatDuration, ren
 class TeacherResultController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
-        $st = db()->query("
-            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name
+        $isAdmin = $me['role'] === 'admin';
+        $sql = "
+            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name,
+                   u.campus_id AS student_campus_id
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
             JOIN users te ON te.id = ta.teacher_id
-            WHERE ta.status IN ('completed','needs_physical')
-            ORDER BY ta.finished_at DESC, ta.id DESC
-        ");
-        view('teacher/results/index', ['title' => 'Sonuçlar', 'me' => $me, 'items' => $st->fetchAll()]);
+            WHERE ta.status IN ('completed','needs_physical')";
+        $params = [];
+        if (!$isAdmin) {
+            $sql .= " AND u.campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
+        }
+        $sql .= " ORDER BY ta.finished_at DESC, ta.id DESC";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        view('teacher/results/index', ['title' => 'Sonuçlar', 'me' => $me, 'items' => $st->fetchAll(), 'isAdmin' => $isAdmin]);
     }
 
     public static function show(string $id): void {
-        $me = requireRole('teacher', 'admin');
+        $me = requireRole('admin'); // detayı sadece admin görür
         $data = self::loadDetail((int)$id, null);
         if (!$data) { flash('err', 'Sonuç bulunamadı.'); redirect('/teacher/results'); }
         $data['title'] = 'Sonuç — ' . $data['assignment']['student_name'];
@@ -30,7 +38,7 @@ class TeacherResultController {
     }
 
     public static function pdf(string $id): void {
-        requireRole('teacher', 'admin');
+        requireRole('admin'); // detaylı PDF sadece admin
         $data = self::loadDetail((int)$id, null);
         if (!$data) { http_response_code(404); echo "Bulunamadı"; return; }
         renderPdfFromView('pdf/result', $data, "sonuc-detayli-{$id}.pdf");
@@ -38,9 +46,10 @@ class TeacherResultController {
 
     /** Özet sonuç PDF'i — sadece toplam skor, süre, soru sayısı */
     public static function summaryPdf(string $id): void {
-        requireRole('teacher', 'admin');
+        $me = requireRole('teacher', 'admin');
         $data = self::loadDetail((int)$id, null);
         if (!$data) { http_response_code(404); echo "Bulunamadı"; return; }
+        if (!self::canAccess($me, $data)) { http_response_code(403); echo "Yetki yok"; return; }
 
         $total = count($data['questions']);
         $answered = 0;
@@ -64,9 +73,10 @@ class TeacherResultController {
     }
 
     public static function incompletePdf(string $id): void {
-        requireRole('teacher', 'admin');
+        $me = requireRole('teacher', 'admin');
         $data = self::loadDetail((int)$id, null);
         if (!$data) { http_response_code(404); echo "Bulunamadı"; return; }
+        if (!self::canAccess($me, $data)) { http_response_code(403); echo "Yetki yok"; return; }
         // Sadece fiziksel veya cevapsız sorular
         $missing = [];
         foreach ($data['questions'] as $q) {
@@ -82,29 +92,23 @@ class TeacherResultController {
         renderPdfFromView('pdf/incomplete', $data, "eksik-{$id}.pdf");
     }
 
+    private static function canAccess(array $me, array $data): bool {
+        if ($me['role'] === 'admin') return true;
+        $myCampus = (int)($me['campus_id'] ?? 0);
+        return $myCampus > 0 && $myCampus === (int)($data['assignment']['student_campus_id'] ?? 0);
+    }
+
     private static function loadDetail(int $assignmentId, ?int $teacherId): ?array {
         $pdo = db();
-        if ($teacherId === null) {
-            $st = $pdo->prepare("
-                SELECT ta.*, t.title AS test_title, t.description AS test_description,
-                       u.full_name AS student_name
-                FROM test_assignments ta
-                JOIN tests t ON t.id = ta.test_id
-                JOIN users u ON u.id = ta.student_id
-                WHERE ta.id = ?
-            ");
-            $st->execute([$assignmentId]);
-        } else {
-            $st = $pdo->prepare("
-                SELECT ta.*, t.title AS test_title, t.description AS test_description,
-                       u.full_name AS student_name
-                FROM test_assignments ta
-                JOIN tests t ON t.id = ta.test_id
-                JOIN users u ON u.id = ta.student_id
-                WHERE ta.id = ? AND ta.teacher_id = ?
-            ");
-            $st->execute([$assignmentId, $teacherId]);
-        }
+        $st = $pdo->prepare("
+            SELECT ta.*, t.title AS test_title, t.description AS test_description,
+                   u.full_name AS student_name, u.campus_id AS student_campus_id
+            FROM test_assignments ta
+            JOIN tests t ON t.id = ta.test_id
+            JOIN users u ON u.id = ta.student_id
+            WHERE ta.id = ?
+        ");
+        $st->execute([$assignmentId]);
         $a = $st->fetch();
         if (!$a) return null;
 
