@@ -161,7 +161,7 @@
     const hasMediaOpt = q.options.some(o => o && o.media);
     const longestLabel = q.options.reduce((m, o) => Math.max(m, ((o && o.label) || '').length), 0);
     // Görselli şıklar her zaman 3 sütun. Yazılı şıklar uzunsa tek sütuna iner.
-    const textStacked = !hasMediaOpt && longestLabel > 32;
+    const textStacked = !hasMediaOpt && longestLabel > 22;
     opts.className = 'options-grid mt-4'
       + (hasMediaOpt ? ' has-media' : '')
       + (textStacked ? ' text-stacked' : '');
