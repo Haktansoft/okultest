@@ -4,7 +4,10 @@
     <h1 class="page-title">Sorular</h1>
     <div class="page-sub">Tüm soru havuzun. Kategoriye göre filtreleyebilirsin.</div>
   </div>
-  <a href="/admin/questions/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Soru</a>
+  <div class="d-flex gap-2">
+    <a href="/admin/questions/import" class="btn btn-outline-primary"><i class="bi bi-file-earmark-spreadsheet"></i> XLSX İçe Aktar</a>
+    <a href="/admin/questions/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Soru</a>
+  </div>
 </div>
 
 <form class="card mb-3" method="get"><div class="card-body py-2">

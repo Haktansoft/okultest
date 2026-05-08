@@ -17,6 +17,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/pdf.php';
+require_once __DIR__ . '/xlsx_reader.php';
 
 foreach (glob(__DIR__ . '/controllers/*.php') as $cf) {
     require_once $cf;
@@ -67,6 +68,8 @@ $r->post('/admin/media/upload',                 ['App\\Controllers\\AdminMediaCo
 $r->post('/admin/media/{id}/delete',            ['App\\Controllers\\AdminMediaController', 'delete']);
 
 $r->get ('/admin/questions',                    ['App\\Controllers\\AdminQuestionController', 'index']);
+$r->get ('/admin/questions/import',             ['App\\Controllers\\AdminQuestionController', 'importForm']);
+$r->post('/admin/questions/import',             ['App\\Controllers\\AdminQuestionController', 'importRun']);
 $r->get ('/admin/questions/new',                ['App\\Controllers\\AdminQuestionController', 'createForm']);
 $r->post('/admin/questions',                    ['App\\Controllers\\AdminQuestionController', 'create']);
 $r->get ('/admin/questions/{id}/edit',          ['App\\Controllers\\AdminQuestionController', 'editForm']);

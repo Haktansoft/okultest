@@ -215,4 +215,239 @@ class AdminQuestionController {
             $st->execute([$qid, $o['label'], $o['media_id'], $o['score'], $o['sort_order']]);
         }
     }
+
+    // ========== XLSX TOPLU İÇE AKTARMA ==========
+
+    public static function importForm(): void {
+        $me = requireRole('admin');
+        view('admin/questions/import', [
+            'title' => 'Toplu Soru İçe Aktarma',
+            'me' => $me,
+            'report' => null,
+        ]);
+    }
+
+    public static function importRun(): void {
+        $me = requireRole('admin');
+
+        if (empty($_FILES['file']) || ($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            flash('err', 'XLSX dosyası seçilmedi veya yüklenemedi.');
+            redirect('/admin/questions/import');
+        }
+        $tmpPath = $_FILES['file']['tmp_name'];
+        $fname   = $_FILES['file']['name'] ?? 'sorular.xlsx';
+
+        try {
+            $rows = \App\readXlsx($tmpPath);
+        } catch (\Throwable $ex) {
+            flash('err', 'XLSX okunamadı: ' . $ex->getMessage());
+            redirect('/admin/questions/import');
+        }
+
+        // Boş dosya
+        if (count($rows) < 2) {
+            flash('err', 'Dosyada veri yok (sadece başlık satırı bulundu).');
+            redirect('/admin/questions/import');
+        }
+
+        // 1. satır = başlık. Sütun harfleri sabit:
+        //   B=SORU, D=RESİM, E/G/I/K/M = CEVAP 1-5, F/H/J/L/N = DEĞER 1-5,
+        //   O = DOĞRU CEVAP (A..E), P = ALT BAŞLIK (kategori adı)
+        $answerCols = [
+            'A' => ['E','F'], 'B' => ['G','H'], 'C' => ['I','J'], 'D' => ['K','L'], 'E' => ['M','N'],
+        ];
+
+        $pdo = db();
+        $report = [
+            'total' => 0, 'imported' => 0, 'skipped' => 0,
+            'categoriesCreated' => 0,
+            'mediaMatched' => 0, 'mediaMissing' => 0,
+            'physicalMarked' => 0,
+            'errors' => [],
+            'created_questions' => [],
+        ];
+
+        // Önce tüm medyayı belleğe al (basename → media row eşlemesi)
+        $allMedia = $pdo->query("SELECT id, kind, original_name FROM media")->fetchAll();
+        $mediaIndex = []; // anahtar: lowercased basename ve full original_name
+        foreach ($allMedia as $m) {
+            $name = (string)$m['original_name'];
+            $key1 = mb_strtolower($name, 'UTF-8');
+            $key2 = mb_strtolower(basename($name), 'UTF-8');
+            $key3 = mb_strtolower(pathinfo(basename($name), PATHINFO_FILENAME), 'UTF-8');
+            $mediaIndex[$key1] = $m;
+            $mediaIndex[$key2] = $m;
+            $mediaIndex[$key3] = $m;
+        }
+        $findMedia = function (string $needle) use ($mediaIndex) {
+            $needle = trim($needle);
+            if ($needle === '') return null;
+            $tries = [
+                mb_strtolower($needle, 'UTF-8'),
+                mb_strtolower(basename($needle), 'UTF-8'),
+                mb_strtolower(pathinfo(basename($needle), PATHINFO_FILENAME), 'UTF-8'),
+            ];
+            foreach ($tries as $k) {
+                if (isset($mediaIndex[$k])) return $mediaIndex[$k];
+            }
+            return null;
+        };
+
+        // Bu kategorilerdeki sorular otomatik "fiziksel" (öğretmen girer) olarak işaretlenir.
+        // Karşılaştırma case- ve aksan-duyarsız (Türkçe İ/I kombinasyonlarına dayanıklı).
+        $physicalCategoryNames = ['İnce Motor', 'Yönerge Takibi'];
+        $normalize = function (string $s): string {
+            $s = trim($s);
+            $map = [
+                // Türkçe büyük → ASCII küçük
+                'İ'=>'i','I'=>'i','Ş'=>'s','Ğ'=>'g','Ü'=>'u','Ö'=>'o','Ç'=>'c',
+                'ç'=>'c','ğ'=>'g','ı'=>'i','ö'=>'o','ş'=>'s','ü'=>'u',
+                // Genel ASCII büyük → küçük
+                'A'=>'a','B'=>'b','C'=>'c','D'=>'d','E'=>'e','F'=>'f','G'=>'g','H'=>'h',
+                'J'=>'j','K'=>'k','L'=>'l','M'=>'m','N'=>'n','O'=>'o','P'=>'p',
+                'Q'=>'q','R'=>'r','S'=>'s','T'=>'t','U'=>'u','V'=>'v','W'=>'w','X'=>'x',
+                'Y'=>'y','Z'=>'z',
+            ];
+            return strtr($s, $map);
+        };
+        $physicalKeys = array_map($normalize, $physicalCategoryNames);
+
+        // Kategori cache (ad → id), ihtiyaç olunca oluştur
+        $catCache = [];
+        foreach ($pdo->query("SELECT id, name FROM categories")->fetchAll() as $c) {
+            $catCache[mb_strtolower($c['name'], 'UTF-8')] = (int)$c['id'];
+        }
+        $getOrCreateCategory = function (string $name) use ($pdo, &$catCache, &$report, $me): int {
+            $name = trim($name);
+            $key = mb_strtolower($name, 'UTF-8');
+            if (isset($catCache[$key])) return $catCache[$key];
+            $st = $pdo->prepare("INSERT INTO categories (name, created_by) VALUES (?, ?)");
+            $st->execute([$name, $me['id']]);
+            $id = (int)$pdo->lastInsertId();
+            $catCache[$key] = $id;
+            $report['categoriesCreated']++;
+            return $id;
+        };
+
+        $isLikelyImageRef = function (string $v): bool {
+            $v = trim($v);
+            if ($v === '') return false;
+            return (bool)preg_match('/\.(png|jpe?g|gif|webp|bmp|svg)$/i', $v);
+        };
+
+        $insertQ  = $pdo->prepare("INSERT INTO questions (category_id, prompt, prompt_media_id, is_physical, created_by) VALUES (?, ?, ?, ?, ?)");
+        $insertO  = $pdo->prepare("INSERT INTO question_options (question_id, label, media_id, score, sort_order) VALUES (?, ?, ?, ?, ?)");
+
+        // 2. satırdan itibaren işle
+        for ($i = 1; $i < count($rows); $i++) {
+            $report['total']++;
+            $r = $rows[$i];
+            $rowNo = $i + 1;
+
+            $prompt = trim((string)($r['B'] ?? ''));
+            if ($prompt === '') {
+                $report['skipped']++;
+                $report['errors'][] = "Satır $rowNo: SORU (B) boş, atlandı.";
+                continue;
+            }
+
+            $catName = trim((string)($r['P'] ?? ''));
+            if ($catName === '') {
+                $report['skipped']++;
+                $report['errors'][] = "Satır $rowNo: ALT BAŞLIK (P) boş, atlandı.";
+                continue;
+            }
+            $catId = $getOrCreateCategory($catName);
+            // Bu kategorideki sorular fiziksel mi (öğretmen girer)?
+            $isPhysical = in_array($normalize($catName), $physicalKeys, true) ? 1 : 0;
+
+            // Sorunun kendi görseli (D)
+            $promptMediaId = null;
+            $promptMediaName = trim((string)($r['D'] ?? ''));
+            if ($promptMediaName !== '') {
+                $m = $findMedia($promptMediaName);
+                if ($m && $m['kind'] === 'image') {
+                    $promptMediaId = (int)$m['id'];
+                    $report['mediaMatched']++;
+                } else {
+                    $report['mediaMissing']++;
+                    $report['errors'][] = "Satır $rowNo: Sorunun görseli '$promptMediaName' bulunamadı.";
+                }
+            }
+
+            // Şıkları işle (E,F G,H I,J K,L M,N)
+            $opts = [];
+            foreach ($answerCols as $letter => [$ansCol, $valCol]) {
+                $ansRaw = trim((string)($r[$ansCol] ?? ''));
+                if ($ansRaw === '') continue;
+                $valRaw = trim((string)($r[$valCol] ?? ''));
+                $score  = $valRaw === '' ? 0 : (float)str_replace(',', '.', $valRaw);
+
+                $optMediaId = null;
+                $label = $ansRaw;
+                if ($isLikelyImageRef($ansRaw)) {
+                    $m = $findMedia($ansRaw);
+                    if ($m && $m['kind'] === 'image') {
+                        $optMediaId = (int)$m['id'];
+                        $label = ''; // sadece görsel; metni boş
+                        $report['mediaMatched']++;
+                    } else {
+                        $label = 'GORSEL EKLENECEK: ' . basename($ansRaw);
+                        $report['mediaMissing']++;
+                    }
+                }
+                $opts[] = ['letter' => $letter, 'label' => $label, 'media_id' => $optMediaId, 'score' => $score];
+            }
+
+            if (count($opts) < 2) {
+                $report['skipped']++;
+                $report['errors'][] = "Satır $rowNo: En az 2 şık gerekiyor (sadece " . count($opts) . " bulundu).";
+                continue;
+            }
+
+            // Tüm puanlar 0 ise → DOĞRU CEVAP'a 1 puan ver
+            $totalScore = array_sum(array_column($opts, 'score'));
+            if ($totalScore <= 0) {
+                $correctLetter = strtoupper(trim((string)($r['O'] ?? '')));
+                if ($correctLetter !== '') {
+                    foreach ($opts as &$o) {
+                        if ($o['letter'] === $correctLetter) $o['score'] = 1.0;
+                    }
+                    unset($o);
+                    $totalScore = array_sum(array_column($opts, 'score'));
+                }
+                if ($totalScore <= 0) {
+                    $report['skipped']++;
+                    $report['errors'][] = "Satır $rowNo: Hiçbir şıkkın puanı yok ve DOĞRU CEVAP (O) boş.";
+                    continue;
+                }
+            }
+
+            // Soruyu kaydet
+            try {
+                $pdo->beginTransaction();
+                $insertQ->execute([$catId, $prompt, $promptMediaId, $isPhysical, $me['id']]);
+                $qid = (int)$pdo->lastInsertId();
+                $sortOrder = 0;
+                foreach ($opts as $o) {
+                    $insertO->execute([$qid, $o['label'], $o['media_id'], $o['score'], $sortOrder++]);
+                }
+                $pdo->commit();
+                $report['imported']++;
+                if ($isPhysical) $report['physicalMarked']++;
+                $report['created_questions'][] = ['id' => $qid, 'prompt' => $prompt];
+            } catch (\Throwable $ex) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                $report['skipped']++;
+                $report['errors'][] = "Satır $rowNo: DB hatası — " . $ex->getMessage();
+            }
+        }
+
+        view('admin/questions/import', [
+            'title'  => 'Toplu Soru İçe Aktarma — Rapor',
+            'me'     => $me,
+            'report' => $report,
+            'fname'  => $fname,
+        ]);
+    }
 }
