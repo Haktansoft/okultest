@@ -7,8 +7,12 @@ function startSession(): void {
     if (session_status() === PHP_SESSION_ACTIVE) return;
     $name = env('SESSION_NAME', 'TESTEGITIMSESSID');
     session_name($name);
+    // Uzun testlerde oturum sürmesin diye GC süresini de uzat (saniye).
+    $lifetime = (int)env('SESSION_LIFETIME', 14400); // 4 saat
+    @ini_set('session.gc_maxlifetime', (string)$lifetime);
+    @ini_set('session.cookie_lifetime', (string)$lifetime);
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => $lifetime,
         'path'     => '/',
         'httponly' => true,
         'samesite' => 'Lax',
@@ -55,6 +59,12 @@ function logoutUser(): void {
 function requireAuth(): array {
     $u = user();
     if (!$u) {
+        if (isApiRequest()) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'auth_required']);
+            exit;
+        }
         header('Location: /login');
         exit;
     }
@@ -64,9 +74,24 @@ function requireAuth(): array {
 function requireRole(string ...$roles): array {
     $u = requireAuth();
     if (!in_array($u['role'], $roles, true)) {
+        if (isApiRequest()) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'forbidden']);
+            exit;
+        }
         http_response_code(403);
         echo "<!doctype html><meta charset=utf-8><title>403</title><h1>403 — Yetkiniz yok</h1>";
         exit;
     }
     return $u;
+}
+
+function isApiRequest(): bool {
+    $ct = (string)($_SERVER['CONTENT_TYPE'] ?? '');
+    $ac = (string)($_SERVER['HTTP_ACCEPT'] ?? '');
+    $xr = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    return strpos($ct, 'json') !== false
+        || strpos($ac, 'json') !== false
+        || $xr === 'xmlhttprequest';
 }

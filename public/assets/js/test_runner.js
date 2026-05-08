@@ -549,9 +549,26 @@
     return out;
   }
 
+  // Hata sonrası otomatik yeniden deneme (exponential backoff)
+  let retryTimer = null;
+  let retryDelayMs = 3000;
+  const RETRY_MAX_MS = 30000;
+  let sessionExpired = false;
+
+  function scheduleRetry() {
+    if (retryTimer || sessionExpired) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      if (dirty) saveNow();
+    }, retryDelayMs);
+    retryDelayMs = Math.min(Math.round(retryDelayMs * 1.5), RETRY_MAX_MS);
+  }
+  function resetRetry() { retryDelayMs = 3000; }
+
   async function saveNow(isFinal = false) {
     if (isTeacher) return;
     if (!dirty && !isFinal) return;
+    if (sessionExpired && !isFinal) return; // oturum gitti — sayfa yenilemeden bir şey yapamayız
     saveStatus.innerHTML = '<i class="bi bi-arrow-repeat"></i> Kaydediliyor';
     try {
       const url = isFinal
@@ -565,13 +582,20 @@
       });
       if (res.ok) {
         dirty = false;
+        resetRetry();
         saveStatus.innerHTML = '<i class="bi bi-check2"></i> Kaydedildi';
         setTimeout(() => { if (!dirty) saveStatus.textContent = ''; }, 1500);
+      } else if (res.status === 419 || res.status === 401 || res.status === 403) {
+        // Oturum / CSRF süresi doldu
+        sessionExpired = true;
+        saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Oturum süresi doldu — sayfayı yenileyin';
       } else {
-        saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Kaydedilemedi';
+        saveStatus.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Kaydedilemedi (${res.status}) — yeniden deneniyor`;
+        if (!isFinal) scheduleRetry();
       }
     } catch {
-      saveStatus.innerHTML = '<i class="bi bi-wifi-off"></i> Bağlantı hatası';
+      saveStatus.innerHTML = '<i class="bi bi-wifi-off"></i> Bağlantı hatası — yeniden deneniyor';
+      if (!isFinal) scheduleRetry();
     }
   }
 
