@@ -8,13 +8,13 @@ declare(strict_types=1);
  * Yerel geliştirmede `public/index.php` çalışır, bu dosyaya gerek yoktur.
  */
 
-// PHP sürüm kontrolü — kod 8.1+ özellikleri (match, str_contains, never tipi) kullanır.
-if (PHP_VERSION_ID < 80100) {
+// PHP sürüm kontrolü — kod arrow fn, typed prop ve null coalesce kullanır (7.4+).
+if (PHP_VERSION_ID < 70400) {
     http_response_code(500);
     echo "<!doctype html><meta charset=utf-8><title>PHP sürümü yetersiz</title>"
-       . "<h1>PHP " . PHP_VERSION . " — uygulama 8.1+ ister</h1>"
+       . "<h1>PHP " . PHP_VERSION . " — uygulama 7.4+ ister</h1>"
        . "<p>cPanel → <strong>Select PHP Version</strong> menüsünden bu domain için"
-       . " <strong>PHP 8.1</strong> veya üstü seçin. Ardından <code>pdo_mysql, gd, fileinfo, mbstring</code> eklentilerini açın.</p>";
+       . " <strong>PHP 7.4</strong> veya üstü seçin. Ardından <code>pdo_mysql, gd, fileinfo, mbstring</code> eklentilerini açın.</p>";
     exit;
 }
 

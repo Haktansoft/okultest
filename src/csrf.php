@@ -20,7 +20,7 @@ function csrfCheck(): void {
     startSession();
     $token = $_POST['_csrf'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     // JSON body içinde _csrf gelmiş olabilir (sendBeacon vb.)
-    if ($token === '' && str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'json')) {
+    if ($token === '' && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'json') !== false) {
         $raw = file_get_contents('php://input');
         if ($raw !== false && $raw !== '') {
             $body = json_decode($raw, true);

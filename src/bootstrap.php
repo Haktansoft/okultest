@@ -31,12 +31,8 @@ $r = new Router();
 $r->any('/', function () {
     $u = App\user();
     if (!$u) App\redirect('/login');
-    App\redirect(match ($u['role']) {
-        'admin'   => '/admin',
-        'teacher' => '/teacher',
-        'student' => '/student',
-        default   => '/login',
-    });
+    $roleHome = ['admin' => '/admin', 'teacher' => '/teacher', 'student' => '/student'];
+    App\redirect($roleHome[$u['role']] ?? '/login');
 });
 $r->get ('/login',  ['App\\Controllers\\AuthController', 'showLogin']);
 $r->post('/login',  ['App\\Controllers\\AuthController', 'login']);

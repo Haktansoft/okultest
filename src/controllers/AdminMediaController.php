@@ -149,12 +149,12 @@ class AdminMediaController {
         if ($v === '') return 0;
         $unit = strtolower(substr($v, -1));
         $n = (int)$v;
-        return match ($unit) {
-            'g' => $n * 1024 * 1024 * 1024,
-            'm' => $n * 1024 * 1024,
-            'k' => $n * 1024,
-            default => (int)$v,
-        };
+        switch ($unit) {
+            case 'g': return $n * 1024 * 1024 * 1024;
+            case 'm': return $n * 1024 * 1024;
+            case 'k': return $n * 1024;
+            default:  return (int)$v;
+        }
     }
 
     private static function humanSize(int $bytes): string {
@@ -165,16 +165,16 @@ class AdminMediaController {
     }
 
     private static function uploadErrMsg(int $err, int $iniMax): string {
-        return match ($err) {
-            UPLOAD_ERR_INI_SIZE   => 'Dosya çok büyük (PHP upload_max_filesize ≈ ' . self::humanSize($iniMax) . ').',
-            UPLOAD_ERR_FORM_SIZE  => 'Form limit aşıldı.',
-            UPLOAD_ERR_PARTIAL    => 'Dosya kısmen yüklendi, tekrar dene.',
-            UPLOAD_ERR_NO_FILE    => 'Dosya seçilmedi.',
-            UPLOAD_ERR_NO_TMP_DIR => 'Sunucuda geçici dizin yok.',
-            UPLOAD_ERR_CANT_WRITE => 'Sunucuda yazma hatası.',
-            UPLOAD_ERR_EXTENSION  => 'Bir PHP eklentisi yüklemeyi durdurdu.',
-            default               => 'Upload hatası kodu: ' . $err,
-        };
+        switch ($err) {
+            case UPLOAD_ERR_INI_SIZE:   return 'Dosya çok büyük (PHP upload_max_filesize ≈ ' . self::humanSize($iniMax) . ').';
+            case UPLOAD_ERR_FORM_SIZE:  return 'Form limit aşıldı.';
+            case UPLOAD_ERR_PARTIAL:    return 'Dosya kısmen yüklendi, tekrar dene.';
+            case UPLOAD_ERR_NO_FILE:    return 'Dosya seçilmedi.';
+            case UPLOAD_ERR_NO_TMP_DIR: return 'Sunucuda geçici dizin yok.';
+            case UPLOAD_ERR_CANT_WRITE: return 'Sunucuda yazma hatası.';
+            case UPLOAD_ERR_EXTENSION:  return 'Bir PHP eklentisi yüklemeyi durdurdu.';
+            default:                    return 'Upload hatası kodu: ' . $err;
+        }
     }
 
     public static function delete(string $id): void {
@@ -210,11 +210,14 @@ class AdminMediaController {
     }
 
     private static function extFromMime(string $mime): string {
-        return match ($mime) {
+        $map = [
             'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp',
-            'audio/mpeg', 'audio/mp3' => 'mp3', 'audio/wav', 'audio/x-wav' => 'wav', 'audio/ogg' => 'ogg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a' => 'm4a',
+            'audio/mpeg' => 'mp3', 'audio/mp3' => 'mp3',
+            'audio/wav'  => 'wav', 'audio/x-wav' => 'wav',
+            'audio/ogg'  => 'ogg',
+            'audio/mp4'  => 'm4a', 'audio/x-m4a' => 'm4a', 'audio/m4a' => 'm4a',
             'video/mp4' => 'mp4', 'video/webm' => 'webm', 'video/quicktime' => 'mov',
-            default => '',
-        };
+        ];
+        return $map[$mime] ?? '';
     }
 }

@@ -202,7 +202,7 @@ class StudentTestController {
         $pdo->prepare("INSERT INTO attempt_events (assignment_id, event_type) VALUES (?, 'submit')")->execute([$id]);
         recomputeScore((int)$id);
 
-        if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
+        if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
             json(['ok' => true, 'status' => $newStatus, 'redirect' => "/student/tests/$id/finished"]);
         }
         redirect("/student/tests/$id/finished");
