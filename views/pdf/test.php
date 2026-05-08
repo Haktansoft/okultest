@@ -1,6 +1,5 @@
 <?php
 use function App\{e, pdfMediaSrc};
-$mediaStmt = \App\db()->prepare("SELECT * FROM media WHERE id=?");
 ?>
 <style>
   body { font-family: dejavusans, sans-serif; font-size: 12pt; }
@@ -62,9 +61,8 @@ $PROMPT_MAX_H = 90;  // mm
 foreach ($questions as $i => $q):
     $pmSrc = null;
     $pmW = $pmH = null;
-    if (!empty($q['prompt_media_id'])) {
-        $mediaStmt->execute([$q['prompt_media_id']]);
-        $pm = $mediaStmt->fetch();
+    if (!empty($q['prompt_media'])) {
+        $pm = $q['prompt_media'];
         if ($pm) {
             $pmSrc = pdfMediaSrc($pm);
             if ($pmSrc && @getimagesize($pmSrc)) {
@@ -116,10 +114,8 @@ foreach ($questions as $i => $q):
             endif;
             $o = $row[$c];
             $omSrc = null;
-            if (!empty($o['media_id'])) {
-                $mediaStmt->execute([$o['media_id']]);
-                $om = $mediaStmt->fetch();
-                if ($om) $omSrc = pdfMediaSrc($om);
+            if (!empty($o['media'])) {
+                $omSrc = pdfMediaSrc($o['media']);
             }
             $globalIdx = $rowIdx * $cols + $c;
             $letter = chr(65 + $globalIdx);

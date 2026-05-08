@@ -158,7 +158,13 @@
     }
 
     const opts = document.createElement('div');
-    opts.className = 'options-grid mt-4';
+    const hasMediaOpt = q.options.some(o => o && o.media);
+    const longestLabel = q.options.reduce((m, o) => Math.max(m, ((o && o.label) || '').length), 0);
+    // Görselli şıklar her zaman 3 sütun. Yazılı şıklar uzunsa tek sütuna iner.
+    const textStacked = !hasMediaOpt && longestLabel > 32;
+    opts.className = 'options-grid mt-4'
+      + (hasMediaOpt ? ' has-media' : '')
+      + (textStacked ? ' text-stacked' : '');
     let blankBtnRef = null;
     q.options.forEach((o, idx) => {
       const node = tpl.content.cloneNode(true);

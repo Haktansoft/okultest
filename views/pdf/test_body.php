@@ -1,6 +1,5 @@
 <?php
 use function App\{e, pdfMediaSrc};
-$mediaStmt = \App\db()->prepare("SELECT * FROM media WHERE id=?");
 ?>
 <style>
   .question { margin: 0 0 12px; page-break-inside: avoid; }
@@ -20,10 +19,8 @@ $mediaStmt = \App\db()->prepare("SELECT * FROM media WHERE id=?");
 </style>
 <?php foreach ($questions as $i => $q):
     $pmSrc = null;
-    if (!empty($q['prompt_media_id'])) {
-        $mediaStmt->execute([$q['prompt_media_id']]);
-        $pm = $mediaStmt->fetch();
-        if ($pm) $pmSrc = pdfMediaSrc($pm);
+    if (!empty($q['prompt_media'])) {
+        $pmSrc = pdfMediaSrc($q['prompt_media']);
     }
 ?>
   <div class="question">
@@ -34,12 +31,7 @@ $mediaStmt = \App\db()->prepare("SELECT * FROM media WHERE id=?");
       <img class="prompt-img" src="<?= e($pmSrc) ?>" width="100%">
     <?php endif; ?>
     <?php foreach ($q['options'] as $j => $o):
-      $omSrc = null;
-      if (!empty($o['media_id'])) {
-          $mediaStmt->execute([$o['media_id']]);
-          $om = $mediaStmt->fetch();
-          if ($om) $omSrc = pdfMediaSrc($om);
-      }
+      $omSrc = !empty($o['media']) ? pdfMediaSrc($o['media']) : null;
       $letter = chr(65 + $j);
     ?>
       <div class="opt">

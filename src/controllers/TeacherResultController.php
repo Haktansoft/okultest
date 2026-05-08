@@ -119,23 +119,45 @@ class TeacherResultController {
         $qs->execute([$a['test_id']]);
         $questions = $qs->fetchAll();
 
-        $optsStmt = $pdo->prepare("SELECT * FROM question_options WHERE question_id=? ORDER BY sort_order, id");
-        $aaStmt   = $pdo->prepare("SELECT a.*, o.label AS option_label, o.score AS option_score FROM attempt_answers a LEFT JOIN question_options o ON o.id = a.selected_option_id WHERE a.assignment_id=? AND a.question_id=?");
-        $paStmt   = $pdo->prepare("SELECT p.*, o.label AS option_label, o.score AS option_score FROM physical_answers p JOIN question_options o ON o.id = p.selected_option_id WHERE p.assignment_id=? AND p.question_id=?");
+        // Şıkları toplu çek
+        $optionsByQ = [];
+        if ($questions) {
+            $qIds = array_map(fn($r) => (int)$r['id'], $questions);
+            $place = implode(',', array_fill(0, count($qIds), '?'));
+            $optsAll = $pdo->prepare("SELECT * FROM question_options WHERE question_id IN ($place) ORDER BY question_id, sort_order, id");
+            $optsAll->execute($qIds);
+            foreach ($optsAll->fetchAll() as $o) $optionsByQ[(int)$o['question_id']][] = $o;
+        }
+
+        // Standart cevaplar (toplu)
+        $aaAll = $pdo->prepare("SELECT a.*, o.label AS option_label, o.score AS option_score
+                                  FROM attempt_answers a
+                                  LEFT JOIN question_options o ON o.id = a.selected_option_id
+                                 WHERE a.assignment_id = ?");
+        $aaAll->execute([$assignmentId]);
+        $aaByQ = [];
+        foreach ($aaAll->fetchAll() as $r) $aaByQ[(int)$r['question_id']] = $r;
+
+        // Fiziksel cevaplar (toplu)
+        $paAll = $pdo->prepare("SELECT p.*, o.label AS option_label, o.score AS option_score
+                                  FROM physical_answers p
+                                  JOIN question_options o ON o.id = p.selected_option_id
+                                 WHERE p.assignment_id = ?");
+        $paAll->execute([$assignmentId]);
+        $paByQ = [];
+        foreach ($paAll->fetchAll() as $r) $paByQ[(int)$r['question_id']] = $r;
 
         foreach ($questions as &$q) {
-            $optsStmt->execute([$q['id']]);
-            $q['options'] = $optsStmt->fetchAll();
-            $q['answer'] = null;
+            $q['options']         = $optionsByQ[(int)$q['id']] ?? [];
+            $q['answer']          = null;
             $q['physical_answer'] = null;
             if ($q['is_physical']) {
-                $paStmt->execute([$assignmentId, $q['id']]);
-                $q['physical_answer'] = $paStmt->fetch() ?: null;
+                $q['physical_answer'] = $paByQ[(int)$q['id']] ?? null;
             } else {
-                $aaStmt->execute([$assignmentId, $q['id']]);
-                $q['answer'] = $aaStmt->fetch() ?: null;
+                $q['answer'] = $aaByQ[(int)$q['id']] ?? null;
             }
         }
+        unset($q);
 
         $totalDuration = 0;
         if ($a['started_at'] && $a['finished_at']) {

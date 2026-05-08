@@ -113,27 +113,47 @@ class TeacherPhysicalController {
         $qs->execute([$a['test_id']]);
         $questions = $qs->fetchAll();
 
-        $optsStmt = $pdo->prepare("SELECT * FROM question_options WHERE question_id=? ORDER BY sort_order, id");
-        $paStmt   = $pdo->prepare("SELECT * FROM physical_answers WHERE assignment_id=? AND question_id=?");
-        $mediaStmt = $pdo->prepare("SELECT * FROM media WHERE id=?");
-        foreach ($questions as &$q) {
-            $optsStmt->execute([$q['id']]);
-            $q['options'] = $optsStmt->fetchAll();
-            $paStmt->execute([$assignmentId, $q['id']]);
-            $q['existing'] = $paStmt->fetch() ?: null;
-            $q['prompt_media'] = null;
-            if ($q['prompt_media_id']) {
-                $mediaStmt->execute([$q['prompt_media_id']]);
-                $q['prompt_media'] = $mediaStmt->fetch() ?: null;
+        // Mevcut fiziksel yanıtlar (önceden girilmişse)
+        $paAll = $pdo->prepare("SELECT * FROM physical_answers WHERE assignment_id=?");
+        $paAll->execute([$assignmentId]);
+        $paByQ = [];
+        foreach ($paAll->fetchAll() as $r) $paByQ[(int)$r['question_id']] = $r;
+
+        // Şıklar ve medyalar — toplu
+        $optionsByQ = [];
+        $mediaIds = [];
+        if ($questions) {
+            $qIds = array_map(fn($r) => (int)$r['id'], $questions);
+            $place = implode(',', array_fill(0, count($qIds), '?'));
+            $optsAll = $pdo->prepare("SELECT * FROM question_options WHERE question_id IN ($place) ORDER BY question_id, sort_order, id");
+            $optsAll->execute($qIds);
+            foreach ($optsAll->fetchAll() as $o) {
+                $optionsByQ[(int)$o['question_id']][] = $o;
+                if (!empty($o['media_id'])) $mediaIds[(int)$o['media_id']] = true;
             }
-            foreach ($q['options'] as &$o) {
-                $o['media'] = null;
-                if ($o['media_id']) {
-                    $mediaStmt->execute([$o['media_id']]);
-                    $o['media'] = $mediaStmt->fetch() ?: null;
-                }
+            foreach ($questions as $q) {
+                if (!empty($q['prompt_media_id'])) $mediaIds[(int)$q['prompt_media_id']] = true;
             }
         }
+        $mediaById = [];
+        if ($mediaIds) {
+            $ids = array_keys($mediaIds);
+            $place = implode(',', array_fill(0, count($ids), '?'));
+            $mst = $pdo->prepare("SELECT * FROM media WHERE id IN ($place)");
+            $mst->execute($ids);
+            foreach ($mst->fetchAll() as $m) $mediaById[(int)$m['id']] = $m;
+        }
+
+        foreach ($questions as &$q) {
+            $q['options']      = $optionsByQ[(int)$q['id']] ?? [];
+            $q['existing']     = $paByQ[(int)$q['id']] ?? null;
+            $q['prompt_media'] = !empty($q['prompt_media_id']) ? ($mediaById[(int)$q['prompt_media_id']] ?? null) : null;
+            foreach ($q['options'] as &$o) {
+                $o['media'] = !empty($o['media_id']) ? ($mediaById[(int)$o['media_id']] ?? null) : null;
+            }
+            unset($o);
+        }
+        unset($q);
         return ['assignment' => $a, 'questions' => $questions];
     }
 }
