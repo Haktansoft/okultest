@@ -17,14 +17,8 @@ class TeacherAssignmentController {
             JOIN users te ON te.id = ta.teacher_id";
         $params = [];
         if (!$isAdmin) {
-            $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
-            if (!$crIds) {
-                view('teacher/assignments/index', ['title' => 'Atamalar', 'me' => $me, 'items' => []]);
-                return;
-            }
-            $place = implode(',', array_fill(0, count($crIds), '?'));
-            $sql .= " WHERE u.classroom_id IN ($place)";
-            $params = $crIds;
+            $sql .= " WHERE u.campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
         }
         $sql .= " ORDER BY ta.id DESC";
         $st = db()->prepare($sql);
@@ -42,18 +36,13 @@ class TeacherAssignmentController {
                 ORDER BY full_name
             ")->fetchAll();
         } else {
-            $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
-            if (!$crIds) { $students = []; }
-            else {
-                $place = implode(',', array_fill(0, count($crIds), '?'));
-                $st = db()->prepare("
-                    SELECT id, full_name FROM users
-                    WHERE role='student' AND is_active=1 AND classroom_id IN ($place)
-                    ORDER BY full_name
-                ");
-                $st->execute($crIds);
-                $students = $st->fetchAll();
-            }
+            $st = db()->prepare("
+                SELECT id, full_name FROM users
+                WHERE role='student' AND is_active=1 AND campus_id=?
+                ORDER BY full_name
+            ");
+            $st->execute([(int)($me['campus_id'] ?? 0)]);
+            $students = $st->fetchAll();
         }
         $tests = db()->query("SELECT id, title FROM tests ORDER BY title")->fetchAll();
         view('teacher/assignments/form', [
@@ -72,16 +61,13 @@ class TeacherAssignmentController {
             redirect('/teacher/assignments/new');
         }
 
-        // Öğrenci id'lerinin gerçekten student olduğunu (ve teacher ise atanmış sınıfta olduğunu) doğrula
+        // Öğrenci id'lerinin gerçekten student olduğunu (ve teacher ise aynı kampüste) doğrula
         $in = implode(',', array_fill(0, count($sids), '?'));
         $where = "role='student' AND is_active=1 AND id IN ($in)";
         $params = $sids;
         if (!$isAdmin) {
-            $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
-            if (!$crIds) { flash('err', 'Sana atanmış sınıf yok.'); redirect('/teacher/assignments'); }
-            $crPlace = implode(',', array_fill(0, count($crIds), '?'));
-            $where .= " AND classroom_id IN ($crPlace)";
-            $params = array_merge($params, $crIds);
+            $where .= " AND campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
         }
         $st = db()->prepare("SELECT id FROM users WHERE $where");
         $st->execute($params);
@@ -227,16 +213,16 @@ class TeacherAssignmentController {
 
     private static function canTouchAssignment(int $assignmentId, array $me): bool {
         if ($me['role'] === 'admin') return true;
-        $crIds = TeacherStudentController::myClassroomIds((int)$me['id']);
-        if (!$crIds) return false;
+        $myCampus = (int)($me['campus_id'] ?? 0);
+        if ($myCampus <= 0) return false;
         $st = db()->prepare("
-            SELECT u.classroom_id FROM test_assignments ta
+            SELECT u.campus_id FROM test_assignments ta
             JOIN users u ON u.id = ta.student_id
             WHERE ta.id=?
         ");
         $st->execute([$assignmentId]);
         $cid = (int)$st->fetchColumn();
-        return $cid > 0 && in_array($cid, $crIds, true);
+        return $cid > 0 && $cid === $myCampus;
     }
 
     private static function loadAssignmentForBulk(int $assignmentId): ?array {

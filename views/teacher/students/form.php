@@ -10,15 +10,6 @@
   <a href="/teacher/students" class="btn btn-link"><i class="bi bi-arrow-left"></i> Listeye dön</a>
 </div>
 
-<?php if (!$editing && $isAdmin && empty($teachers)): ?>
-  <div class="alert alert-warning">
-    Önce <a href="/admin/teachers/new">en az bir kampüs atanmış öğretmen</a> oluşturun.
-  </div>
-<?php elseif (!$editing && !$isAdmin && empty($classrooms)): ?>
-  <div class="alert alert-warning">
-    Önce <a href="/teacher/classrooms/new">en az bir sınıf</a> oluşturmalısın.
-  </div>
-<?php else: ?>
 <form method="post"
       action="<?= $editing ? '/teacher/students/' . (int)$item['id'] . '/update' : '/teacher/students' ?>"
       class="card" style="max-width:560px">
@@ -27,12 +18,12 @@
 
     <?php if (!$editing && $isAdmin): ?>
       <div class="mb-3">
-        <label class="form-label">Öğretmen <span class="muted tiny">(öğrencinin bağlanacağı öğretmen — sınıf seçenekleri öğretmenin atanmış sınıflarından gelir)</span></label>
-        <select class="form-select" name="teacher_id" id="teacher-select" required>
-          <option value="">— Öğretmen seç —</option>
-          <?php foreach ($teachers as $t): ?>
-            <option value="<?= (int)$t['id'] ?>">
-              <?= e($t['full_name']) ?> — <?= e($t['institution_name']) ?> / <?= e($t['campus_name']) ?>
+        <label class="form-label">Kampüs <span class="muted tiny">(öğrencinin bağlanacağı kampüs)</span></label>
+        <select class="form-select" name="campus_id" required>
+          <option value="">— Kampüs seç —</option>
+          <?php foreach ($campuses as $c): ?>
+            <option value="<?= (int)$c['id'] ?>">
+              <?= e($c['institution_name']) ?> — <?= e($c['campus_name']) ?>
             </option>
           <?php endforeach; ?>
         </select>
@@ -50,14 +41,25 @@
              required value="<?= e($item['tc'] ?? '') ?>">
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Sınıf</label>
-      <select class="form-select" name="classroom_id" id="classroom-select" required <?= (!$editing && $isAdmin) ? 'disabled' : '' ?>>
-        <option value="">— Önce öğretmen seç —</option>
-        <?php foreach (($classrooms ?? []) as $c): ?>
-          <option value="<?= (int)$c['id'] ?>" <?= ($item && $item['classroom_id'] == $c['id']) ? 'selected' : '' ?>><?= e($c['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
+    <div class="row g-3">
+      <div class="col-7">
+        <label class="form-label">Sınıf</label>
+        <select class="form-select" name="grade_level" required>
+          <option value="">— Seç —</option>
+          <?php foreach ($gradeLevels as $g): ?>
+            <option value="<?= e($g) ?>" <?= ($item && $item['grade_level'] === $g) ? 'selected' : '' ?>><?= e($g) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-5">
+        <label class="form-label">Şube</label>
+        <select class="form-select" name="section" required>
+          <option value="">— Seç —</option>
+          <?php foreach ($sections as $s): ?>
+            <option value="<?= e($s) ?>" <?= ($item && $item['section'] === $s) ? 'selected' : '' ?>><?= e($s) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
     </div>
   </div>
   <div class="card-footer text-end">
@@ -65,28 +67,3 @@
     <button class="btn btn-primary"><?= $editing ? 'Kaydet' : 'Ekle' ?></button>
   </div>
 </form>
-
-<?php if (!$editing && $isAdmin): ?>
-<script>
-(() => {
-  const classroomsByTeacher = <?= json_encode($classroomsByTeacher ?? [], JSON_UNESCAPED_UNICODE) ?>;
-  const teacherSel = document.getElementById('teacher-select');
-  const classSel   = document.getElementById('classroom-select');
-  teacherSel.addEventListener('change', () => {
-    const teacherId = teacherSel.value || 0;
-    classSel.innerHTML = '';
-    const list = classroomsByTeacher[teacherId] || [];
-    if (!list.length) {
-      classSel.innerHTML = '<option value="">— Bu öğretmene sınıf atanmamış —</option>';
-      classSel.disabled = true;
-      return;
-    }
-    classSel.disabled = false;
-    classSel.appendChild(new Option('— Sınıf seç —', ''));
-    list.forEach(c => classSel.appendChild(new Option(c.name, c.id)));
-  });
-})();
-</script>
-<?php endif; ?>
-
-<?php endif; ?>

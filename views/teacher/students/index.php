@@ -15,13 +15,14 @@
         <th>T.C. (Şifre)</th>
         <?php if ($isAdmin): ?><th>Kurum</th><th>Kampüs</th><?php endif; ?>
         <th>Sınıf</th>
+        <th>Şube</th>
         <th>Durum</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       <?php if (!$items): ?>
-        <tr><td colspan="<?= $isAdmin ? 7 : 5 ?>"><div class="empty-state"><div class="icon"><i class="bi bi-people"></i></div>Henüz öğrenci yok.</div></td></tr>
+        <tr><td colspan="<?= $isAdmin ? 8 : 6 ?>"><div class="empty-state"><div class="icon"><i class="bi bi-people"></i></div>Henüz öğrenci yok.</div></td></tr>
       <?php else: foreach ($items as $i): ?>
         <tr>
           <td class="fw-semibold"><?= e($i['full_name']) ?></td>
@@ -30,7 +31,8 @@
             <td><span class="badge text-bg-light"><?= e($i['institution_name'] ?? '—') ?></span></td>
             <td><?= e($i['campus_name'] ?? '—') ?></td>
           <?php endif; ?>
-          <td><?= e($i['classroom_name'] ?? '—') ?></td>
+          <td><?= e($i['grade_level'] ?? '—') ?></td>
+          <td><?= e($i['section'] ?? '—') ?></td>
           <td><?= $i['is_active'] ? '<span class="badge text-bg-success">Aktif</span>' : '<span class="badge text-bg-secondary">Pasif</span>' ?></td>
           <td class="text-end">
             <a class="btn btn-sm btn-outline-secondary" href="/teacher/students/<?= (int)$i['id'] ?>/edit"><i class="bi bi-pencil"></i> Düzenle</a>
