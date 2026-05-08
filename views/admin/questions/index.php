@@ -10,6 +10,26 @@
   </div>
 </div>
 
+<?php if (!empty($missingTotal)): ?>
+  <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <i class="bi bi-image-alt me-1"></i>
+      <strong><?= (int)$missingTotal ?> soruda</strong> görseli bulunamayan şık var
+      <span class="muted">(<em>"GORSEL EKLENECEK: …"</em> etiketli).</span>
+      Görselleri <a href="/admin/media">/admin/media</a>'dan yükleyip ilgili soruları düzenleyerek eşleştirebilirsin.
+    </div>
+    <div class="d-flex gap-2">
+      <?php if (empty($missing)): ?>
+        <a class="btn btn-sm btn-outline-warning" href="?missing_media=1">
+          <i class="bi bi-funnel"></i> Sadece bunları göster
+        </a>
+      <?php else: ?>
+        <a class="btn btn-sm btn-outline-secondary" href="/admin/questions">Filtreyi temizle</a>
+      <?php endif; ?>
+    </div>
+  </div>
+<?php endif; ?>
+
 <form class="card mb-3" method="get"><div class="card-body py-2">
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <label class="form-label m-0 muted tiny">Kategori</label>
@@ -21,8 +41,12 @@
     </select>
     <label class="form-label m-0 muted tiny ms-2">Ara</label>
     <input name="q" value="<?= e($q ?? '') ?>" class="form-control form-control-sm" style="max-width:280px" placeholder="Soru metninde ara…">
+    <?php if (!empty($missing)): ?>
+      <input type="hidden" name="missing_media" value="1">
+      <span class="badge text-bg-warning"><i class="bi bi-image-alt me-1"></i>Eksik görselli</span>
+    <?php endif; ?>
     <button class="btn btn-sm btn-primary"><i class="bi bi-search"></i> Filtrele</button>
-    <?php if ((!empty($q) || !empty($selectedCat))): ?>
+    <?php if (!empty($q) || !empty($selectedCat) || !empty($missing)): ?>
       <a class="btn btn-sm btn-outline-secondary" href="/admin/questions">Temizle</a>
     <?php endif; ?>
     <span class="ms-auto muted tiny"><?= (int)($total ?? count($items)) ?> sonuç</span>
@@ -35,11 +59,16 @@
     <tbody>
       <?php if (!$items): ?>
         <tr><td colspan="6">
-          <div class="empty-state"><div class="icon"><i class="bi bi-question-square"></i></div><?= !empty($q) ? 'Aramanla eşleşen soru yok.' : 'Henüz soru yok.' ?></div>
+          <div class="empty-state"><div class="icon"><i class="bi bi-question-square"></i></div><?= !empty($q) || !empty($missing) ? 'Bu filtreyle eşleşen soru yok.' : 'Henüz soru yok.' ?></div>
         </td></tr>
       <?php else: foreach ($items as $i): ?>
         <tr>
-          <td style="max-width:520px"><?= e(mb_strimwidth(strip_tags($i['prompt']),0,140,'…','UTF-8')) ?></td>
+          <td style="max-width:520px">
+            <?= e(mb_strimwidth(strip_tags($i['prompt']),0,140,'…','UTF-8')) ?>
+            <?php if (!empty($i['has_missing_media'])): ?>
+              <span class="badge text-bg-warning ms-1" title="Bir veya daha fazla şıkta görsel bulunamadı"><i class="bi bi-image-alt"></i> görsel eksik</span>
+            <?php endif; ?>
+          </td>
           <td><span class="badge text-bg-light"><?= e($i['category_name']) ?></span></td>
           <td class="text-end"><?= (int)$i['option_count'] ?></td>
           <td class="text-end"><?= e($i['total_score']) ?></td>
@@ -63,8 +92,9 @@
     <ul class="pagination pagination-sm m-0">
       <?php
         $win = 2; $start = max(1, $page - $win); $end = min($totalPages, $page + $win);
-        $url = function ($p) use ($selectedCat, $q) {
+        $url = function ($p) use ($selectedCat, $q, $missing) {
             $qs = ['category_id' => (int)$selectedCat, 'q' => (string)$q, 'page' => (int)$p];
+            if (!empty($missing)) $qs['missing_media'] = 1;
             return '?' . http_build_query($qs);
         };
       ?>

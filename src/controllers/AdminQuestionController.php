@@ -10,12 +10,16 @@ class AdminQuestionController {
         $me = requireRole('admin');
         $cat = (int)($_GET['category_id'] ?? 0);
         $q   = trim((string)($_GET['q'] ?? ''));
+        $missing = !empty($_GET['missing_media']);
         $perPage = 50;
         $page = max(1, (int)($_GET['page'] ?? 1));
+
+        $missingExists = "EXISTS (SELECT 1 FROM question_options o WHERE o.question_id = q.id AND o.label LIKE 'GORSEL EKLENECEK:%')";
 
         $where = []; $params = [];
         if ($cat > 0) { $where[] = "q.category_id = ?"; $params[] = $cat; }
         if ($q !== '') { $where[] = "q.prompt LIKE ?"; $params[] = '%' . $q . '%'; }
+        if ($missing)  { $where[] = $missingExists; }
         $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
         $cst = db()->prepare("SELECT COUNT(*) FROM questions q" . $whereSql);
@@ -25,9 +29,13 @@ class AdminQuestionController {
         if ($page > $totalPages) $page = $totalPages;
         $offset = ($page - 1) * $perPage;
 
+        // Toplam (filtreden bağımsız) eksik görselli soru sayısı
+        $missingTotal = (int)db()->query("SELECT COUNT(DISTINCT q.id) FROM questions q WHERE $missingExists")->fetchColumn();
+
         $sql = "SELECT q.*, c.name AS category_name,
                   (SELECT COUNT(*) FROM question_options o WHERE o.question_id=q.id) AS option_count,
-                  (SELECT COALESCE(SUM(o.score), 0) FROM question_options o WHERE o.question_id=q.id) AS total_score
+                  (SELECT COALESCE(SUM(o.score), 0) FROM question_options o WHERE o.question_id=q.id) AS total_score,
+                  $missingExists AS has_missing_media
                 FROM questions q
                 JOIN categories c ON c.id=q.category_id"
               . $whereSql
@@ -37,8 +45,9 @@ class AdminQuestionController {
         $cats = db()->query("SELECT id, name FROM categories ORDER BY name")->fetchAll();
         view('admin/questions/index', [
             'title' => 'Sorular', 'me' => $me, 'items' => $items, 'cats' => $cats,
-            'selectedCat' => $cat, 'q' => $q,
+            'selectedCat' => $cat, 'q' => $q, 'missing' => $missing,
             'page' => $page, 'totalPages' => $totalPages, 'total' => $total,
+            'missingTotal' => $missingTotal,
         ]);
     }
 
