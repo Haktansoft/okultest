@@ -56,6 +56,12 @@
         </button>
       </div>
       <div class="test-topbar-right">
+        <span id="current-category" class="meta-pill meta-cat" style="display:none">
+          <i class="bi bi-bookmark"></i> <span class="cat-text"></span>
+        </span>
+        <span id="current-physical" class="meta-pill meta-physical" style="display:none">
+          <i class="bi bi-pencil-square"></i> Fiziksel soru
+        </span>
         <span id="timer" class="timer-pill" style="display:none"><span class="timer-text">--:--</span></span>
         <span id="save-status" class="save-status"></span>
       </div>

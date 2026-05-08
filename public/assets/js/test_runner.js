@@ -174,6 +174,7 @@
 
   function renderIntro() {
     const q = D.questions[currentIndex];
+    clearTopbarPills();
     container.innerHTML = '';
     const card = document.createElement('div');
     card.className = 'category-intro';
@@ -238,33 +239,11 @@
   function renderQuestion() {
     const q = D.questions[currentIndex];
     progress.textContent = `${currentIndex + 1} / ${D.questions.length}`;
+    setTopbarPills(q);
     container.innerHTML = '';
     const card = document.createElement('div');
     card.className = 'question-card';
     if (q.is_physical) card.classList.add('question-card-physical');
-
-    const head = document.createElement('div');
-    head.className = 'qc-head';
-    const num = document.createElement('div');
-    num.className = 'qc-num';
-    num.innerHTML = `<span class="qc-num-label">Soru</span><span class="qc-num-val">${currentIndex + 1}</span>`;
-    head.appendChild(num);
-    const headRight = document.createElement('div');
-    headRight.className = 'qc-head-right';
-    if (q.is_physical) {
-      const phys = document.createElement('span');
-      phys.className = 'qc-physical';
-      phys.innerHTML = '<i class="bi bi-pencil-square"></i> Fiziksel soru';
-      headRight.appendChild(phys);
-    }
-    if (q.category) {
-      const cat = document.createElement('span');
-      cat.className = 'qc-cat';
-      cat.innerHTML = `<i class="bi bi-bookmark"></i> ${escapeHtml(q.category)}`;
-      headRight.appendChild(cat);
-    }
-    head.appendChild(headRight);
-    card.appendChild(head);
 
     const prompt = document.createElement('div');
     prompt.className = 'question-prompt';
@@ -380,6 +359,23 @@
     else renderQuestion();
   }
 
+  function setTopbarPills(q) {
+    const catEl = document.getElementById('current-category');
+    const physEl = document.getElementById('current-physical');
+    if (catEl) {
+      if (q && q.category) {
+        catEl.querySelector('.cat-text').textContent = q.category;
+        catEl.style.display = '';
+      } else {
+        catEl.style.display = 'none';
+      }
+    }
+    if (physEl) {
+      physEl.style.display = (q && q.is_physical) ? '' : 'none';
+    }
+  }
+  function clearTopbarPills() { setTopbarPills(null); }
+
   function transitionTo(renderFn) {
     if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
     container.classList.remove('is-entering');
@@ -398,9 +394,13 @@
   function scheduleAutoAdvance() {
     if (advanceTimer) clearTimeout(advanceTimer);
     const isLast = currentIndex === D.questions.length - 1;
-    if (isLast) return; // son soruda otomatik bitirme yok — kullanıcı butonla bitirsin
     advanceTimer = setTimeout(() => {
-      doMove(+1);
+      if (isLast) {
+        const allMarked = D.questions.every(qq => marked[qq.id]);
+        if (allMarked) finishTest(true);
+      } else {
+        doMove(+1);
+      }
     }, 480);
   }
 
