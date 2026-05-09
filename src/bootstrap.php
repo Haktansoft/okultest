@@ -139,6 +139,8 @@ $r->get ('/teacher', function () {
 });
 
 $r->get ('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'index']);
+$r->get ('/teacher/students/import',         ['App\\Controllers\\TeacherStudentController', 'importForm']);
+$r->post('/teacher/students/import',         ['App\\Controllers\\TeacherStudentController', 'importRun']);
 $r->get ('/teacher/students/new',            ['App\\Controllers\\TeacherStudentController', 'createForm']);
 $r->post('/teacher/students',                ['App\\Controllers\\TeacherStudentController', 'create']);
 $r->get ('/teacher/students/{id}/edit',      ['App\\Controllers\\TeacherStudentController', 'editForm']);

@@ -4,7 +4,12 @@
     <h1 class="page-title">Öğrenciler</h1>
     <div class="page-sub">Yeni öğrenci eklediğinde mevcut tüm testler otomatik atanır.</div>
   </div>
-  <a href="/teacher/students/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Öğrenci</a>
+  <div class="d-flex gap-2">
+    <?php if ($isAdmin): ?>
+      <a href="/teacher/students/import" class="btn btn-outline-primary"><i class="bi bi-file-earmark-spreadsheet"></i> XLSX İçe Aktar</a>
+    <?php endif; ?>
+    <a href="/teacher/students/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Öğrenci</a>
+  </div>
 </div>
 
 <div class="table-wrap">
