@@ -17,8 +17,8 @@
           <i class="bi bi-arrow-left"></i> Testlerime dön
         </a>
       <?php else: ?>
-        <a href="/teacher/assignments" class="btn btn-primary btn-finish-cta">
-          <i class="bi bi-arrow-left"></i> Atamalara dön
+        <a href="/teacher/results" class="btn btn-primary btn-finish-cta">
+          <i class="bi bi-clipboard-data"></i> Sonuçlar sayfasına git
         </a>
       <?php endif; ?>
     </div>
