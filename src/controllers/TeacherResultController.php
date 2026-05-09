@@ -44,7 +44,7 @@ class TeacherResultController {
         renderPdfFromView('pdf/result', $data, "sonuc-detayli-{$id}.pdf");
     }
 
-    /** Özet sonuç PDF'i — sadece toplam skor, süre, soru sayısı */
+    /** Özet sonuç PDF'i — toplam skor, süre, soru sayısı + kategori bazlı grafik */
     public static function summaryPdf(string $id): void {
         $me = requireRole('teacher', 'admin');
         $data = self::loadDetail((int)$id, null);
@@ -54,21 +54,56 @@ class TeacherResultController {
         $total = count($data['questions']);
         $answered = 0;
         $totalPossible = 0;
+        $categories = [];
+
         foreach ($data['questions'] as $q) {
+            $catName = $q['category_name'] ?? 'Diğer';
+            if (!isset($categories[$catName])) {
+                $categories[$catName] = [
+                    'name' => $catName, 'qcount' => 0, 'answered' => 0,
+                    'possible' => 0.0, 'earned' => 0.0,
+                ];
+            }
+            $cat =& $categories[$catName];
+            $cat['qcount']++;
+
+            $maxOpt = 0.0;
+            foreach ($q['options'] as $o) {
+                $s = (float)$o['score'];
+                if ($s > $maxOpt) $maxOpt = $s;
+            }
+            $cat['possible'] += $maxOpt;
+            $totalPossible   += $maxOpt;
+
             $isPhys = (bool)$q['is_physical'];
             $ans = $isPhys ? $q['physical_answer'] : $q['answer'];
-            if ($ans && !empty($ans['selected_option_id'])) $answered++;
-            // Toplam mümkün puan: her sorudaki en yüksek şık puanı
-            $maxOpt = 0;
-            foreach ($q['options'] as $o) {
-                if ((float)$o['score'] > $maxOpt) $maxOpt = (float)$o['score'];
+            if ($ans && !empty($ans['selected_option_id'])) {
+                $answered++;
+                $cat['answered']++;
+                $cat['earned'] += isset($ans['option_score']) ? (float)$ans['option_score'] : 0.0;
             }
-            $totalPossible += $maxOpt;
+            unset($cat);
         }
 
-        $data['total_questions']  = $total;
+        // Kategori başına yüzde
+        foreach ($categories as &$c) {
+            $c['percent'] = $c['possible'] > 0 ? round(($c['earned'] / $c['possible']) * 100) : 0;
+        }
+        unset($c);
+        $categories = array_values($categories);
+
+        // Kurum logosu — varsa absolute path
+        $logoPath = null;
+        if (!empty($data['assignment']['institution_logo_path'])) {
+            $abs = \App\UPLOAD_PATH . '/' . $data['assignment']['institution_logo_path'];
+            if (is_file($abs)) $logoPath = $abs;
+        }
+
+        $data['total_questions']    = $total;
         $data['answered_questions'] = $answered;
-        $data['total_possible']   = $totalPossible;
+        $data['total_possible']     = $totalPossible;
+        $data['categoryStats']      = $categories;
+        $data['logoPath']           = $logoPath;
         renderPdfFromView('pdf/result_summary', $data, "sonuc-{$id}.pdf");
     }
 
@@ -102,10 +137,18 @@ class TeacherResultController {
         $pdo = db();
         $st = $pdo->prepare("
             SELECT ta.*, t.title AS test_title, t.description AS test_description,
-                   u.full_name AS student_name, u.campus_id AS student_campus_id
+                   u.full_name AS student_name, u.tc AS student_tc,
+                   u.grade_level AS student_grade, u.section AS student_section,
+                   u.campus_id AS student_campus_id,
+                   c.name AS campus_name,
+                   i.name AS institution_name,
+                   m.path AS institution_logo_path
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
+            LEFT JOIN campuses c ON c.id = u.campus_id
+            LEFT JOIN institutions i ON i.id = c.institution_id
+            LEFT JOIN media m ON m.id = i.logo_media_id AND m.kind='image'
             WHERE ta.id = ?
         ");
         $st->execute([$assignmentId]);
