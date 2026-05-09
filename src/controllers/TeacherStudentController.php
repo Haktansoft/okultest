@@ -12,30 +12,83 @@ class TeacherStudentController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
         $isAdmin = $me['role'] === 'admin';
-        if ($isAdmin) {
-            $items = db()->query("
-                SELECT u.*, c.name AS campus_name, i.name AS institution_name
-                  FROM users u
-             LEFT JOIN campuses c ON c.id = u.campus_id
-             LEFT JOIN institutions i ON i.id = c.institution_id
-                 WHERE u.role='student'
-              ORDER BY i.name, c.name, u.grade_level, u.section, u.full_name
-            ")->fetchAll();
-        } else {
-            $campusId = self::myCampusId($me);
-            if (!$campusId) {
+
+        $f = [
+            'q'              => trim((string)($_GET['q'] ?? '')),
+            'institution_id' => (int)($_GET['institution_id'] ?? 0),
+            'campus_id'      => (int)($_GET['campus_id'] ?? 0),
+            'grade_level'    => trim((string)($_GET['grade_level'] ?? '')),
+            'section'        => trim((string)($_GET['section'] ?? '')),
+            'status'         => trim((string)($_GET['status'] ?? '')), // active|passive
+        ];
+
+        $where = ["u.role='student'"];
+        $params = [];
+
+        if (!$isAdmin) {
+            $myCampus = (int)($me['campus_id'] ?? 0);
+            if (!$myCampus) {
                 flash('err', 'Yönetici sana bir kampüs atamadan öğrenci listeleyemezsin.');
                 redirect('/teacher');
             }
-            $st = db()->prepare("
-                SELECT * FROM users
-                 WHERE role='student' AND campus_id=?
-              ORDER BY grade_level, section, full_name
-            ");
-            $st->execute([$campusId]);
-            $items = $st->fetchAll();
+            $where[] = "u.campus_id = ?";
+            $params[] = $myCampus;
+        } else {
+            if ($f['campus_id'] > 0) {
+                $where[] = "u.campus_id = ?";
+                $params[] = $f['campus_id'];
+            } elseif ($f['institution_id'] > 0) {
+                $where[] = "u.campus_id IN (SELECT id FROM campuses WHERE institution_id = ?)";
+                $params[] = $f['institution_id'];
+            }
         }
-        view('teacher/students/index', ['title' => 'Öğrenciler', 'me' => $me, 'items' => $items]);
+
+        if ($f['q'] !== '') {
+            $where[] = "(u.full_name LIKE ? OR u.tc LIKE ?)";
+            $like = '%' . $f['q'] . '%';
+            $params[] = $like;
+            $params[] = $like;
+        }
+        if ($f['grade_level'] !== '' && in_array($f['grade_level'], self::GRADE_LEVELS, true)) {
+            $where[] = "u.grade_level = ?";
+            $params[] = $f['grade_level'];
+        }
+        if ($f['section'] !== '' && in_array($f['section'], self::SECTIONS, true)) {
+            $where[] = "u.section = ?";
+            $params[] = $f['section'];
+        }
+        if ($f['status'] === 'active')   { $where[] = "u.is_active = 1"; }
+        elseif ($f['status'] === 'passive') { $where[] = "u.is_active = 0"; }
+
+        $sql = "
+            SELECT u.*, c.name AS campus_name, i.name AS institution_name
+              FROM users u
+         LEFT JOIN campuses c ON c.id = u.campus_id
+         LEFT JOIN institutions i ON i.id = c.institution_id
+             WHERE " . implode(' AND ', $where) . "
+          ORDER BY i.name, c.name, u.grade_level, u.section, u.full_name
+        ";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        $items = $st->fetchAll();
+
+        $institutions = $isAdmin
+            ? db()->query("SELECT id, name FROM institutions ORDER BY name")->fetchAll()
+            : [];
+        $campuses = $isAdmin
+            ? db()->query("
+                SELECT c.id, c.name, c.institution_id, i.name AS institution_name
+                  FROM campuses c JOIN institutions i ON i.id = c.institution_id
+              ORDER BY i.name, c.name
+            ")->fetchAll()
+            : [];
+
+        view('teacher/students/index', [
+            'title' => 'Öğrenciler', 'me' => $me, 'items' => $items,
+            'filters' => $f,
+            'institutions' => $institutions, 'campuses' => $campuses,
+            'gradeLevels' => self::GRADE_LEVELS, 'sections' => self::SECTIONS,
+        ]);
     }
 
     public static function createForm(): void {
