@@ -109,8 +109,8 @@ $f = $filters ?? [];
     <thead>
       <tr>
         <th>Öğrenci</th>
+        <th>T.C.</th>
         <th>Test</th>
-        <th>Atayan</th>
         <th>Durum</th>
         <th class="text-end">Skor</th>
         <th></th>
@@ -122,8 +122,8 @@ $f = $filters ?? [];
       <?php else: foreach ($items as $i): ?>
         <tr>
           <td class="fw-semibold"><?= e($i['student_name']) ?></td>
-          <td><?= e($i['test_title']) ?></td>
-          <td class="muted tiny"><?= e($i['teacher_name'] ?? '—') ?></td>
+          <td><code class="small"><?= e($i['student_tc'] ?? '—') ?></code></td>
+          <td style="letter-spacing:-0.02em; font-size:13px;"><?= e($i['test_title']) ?></td>
           <td><?= $statusBadge[$i['status']] ?? e($i['status']) ?></td>
           <td class="text-end"><?= $i['total_score'] !== null ? e($i['total_score']) : '<span class="muted">—</span>' ?></td>
           <td class="text-end">
@@ -132,7 +132,7 @@ $f = $filters ?? [];
                 <i class="bi bi-input-cursor-text"></i> Toplu gir
               </a>
               <a class="btn btn-sm btn-success" href="/teacher/assignments/<?= (int)$i['id'] ?>/run" title="Öğrenci ekranı gibi çözdür">
-                <i class="bi bi-play-circle"></i> Öğrenci gibi çöz
+                <i class="bi bi-play-circle"></i> Öğrenci çöz
               </a>
             <?php endif; ?>
             <?php if (in_array($i['status'], ['completed','needs_physical'], true)): ?>

@@ -53,7 +53,7 @@ class TeacherAssignmentController {
         if ($f['test_id'] > 0) { $where[] = "ta.test_id = ?"; $params[] = $f['test_id']; }
 
         $sql = "
-            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name,
+            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, u.tc AS student_tc, te.full_name AS teacher_name,
                    u.grade_level AS student_grade, u.section AS student_section
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
