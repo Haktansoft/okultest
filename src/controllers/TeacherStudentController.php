@@ -6,7 +6,7 @@ namespace App\Controllers;
 use function App\{db, e, flash, redirect, requireRole, view};
 
 class TeacherStudentController {
-    public const GRADE_LEVELS = ['4 YAŞ', '5 YAŞ', '6 YAŞ', '1. SINIF', '2. SINIF', '3. SINIF', '4. SINIF'];
+    public const GRADE_LEVELS = ['4 YAŞ', '5 YAŞ', '6 YAŞ'];
     public const SECTIONS     = ['A','B','C','D','E','F','G','H'];
 
     public static function index(): void {

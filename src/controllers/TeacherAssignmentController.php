@@ -9,21 +9,79 @@ class TeacherAssignmentController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
         $isAdmin = $me['role'] === 'admin';
+
+        $f = [
+            'q'              => trim((string)($_GET['q'] ?? '')),
+            'institution_id' => (int)($_GET['institution_id'] ?? 0),
+            'campus_id'      => (int)($_GET['campus_id'] ?? 0),
+            'grade_level'    => trim((string)($_GET['grade_level'] ?? '')),
+            'section'        => trim((string)($_GET['section'] ?? '')),
+            'status'         => trim((string)($_GET['status'] ?? '')),
+            'test_id'        => (int)($_GET['test_id'] ?? 0),
+        ];
+
+        $where = [];
+        $params = [];
+
+        if (!$isAdmin) {
+            $where[] = "u.campus_id = ?";
+            $params[] = (int)($me['campus_id'] ?? 0);
+        } else {
+            if ($f['campus_id'] > 0) {
+                $where[] = "u.campus_id = ?";
+                $params[] = $f['campus_id'];
+            } elseif ($f['institution_id'] > 0) {
+                $where[] = "u.campus_id IN (SELECT id FROM campuses WHERE institution_id = ?)";
+                $params[] = $f['institution_id'];
+            }
+        }
+        if ($f['q'] !== '') {
+            $where[] = "(u.full_name LIKE ? OR u.tc LIKE ? OR t.title LIKE ?)";
+            $like = '%' . $f['q'] . '%';
+            $params[] = $like; $params[] = $like; $params[] = $like;
+        }
+        if ($f['grade_level'] !== '' && in_array($f['grade_level'], TeacherStudentController::GRADE_LEVELS, true)) {
+            $where[] = "u.grade_level = ?"; $params[] = $f['grade_level'];
+        }
+        if ($f['section'] !== '' && in_array($f['section'], TeacherStudentController::SECTIONS, true)) {
+            $where[] = "u.section = ?"; $params[] = $f['section'];
+        }
+        $allowedStatus = ['pending','in_progress','needs_physical','completed'];
+        if (in_array($f['status'], $allowedStatus, true)) {
+            $where[] = "ta.status = ?"; $params[] = $f['status'];
+        }
+        if ($f['test_id'] > 0) { $where[] = "ta.test_id = ?"; $params[] = $f['test_id']; }
+
         $sql = "
-            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name
+            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name,
+                   u.grade_level AS student_grade, u.section AS student_section
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
             JOIN users te ON te.id = ta.teacher_id";
-        $params = [];
-        if (!$isAdmin) {
-            $sql .= " WHERE u.campus_id = ?";
-            $params[] = (int)($me['campus_id'] ?? 0);
-        }
+        if ($where) $sql .= " WHERE " . implode(' AND ', $where);
         $sql .= " ORDER BY ta.id DESC";
         $st = db()->prepare($sql);
         $st->execute($params);
-        view('teacher/assignments/index', ['title' => 'Atamalar', 'me' => $me, 'items' => $st->fetchAll()]);
+        $items = $st->fetchAll();
+
+        $institutions = $isAdmin
+            ? db()->query("SELECT id, name FROM institutions ORDER BY name")->fetchAll() : [];
+        $campuses = $isAdmin
+            ? db()->query("
+                SELECT c.id, c.name, c.institution_id, i.name AS institution_name
+                  FROM campuses c JOIN institutions i ON i.id = c.institution_id
+              ORDER BY i.name, c.name
+            ")->fetchAll() : [];
+        $tests = db()->query("SELECT id, title FROM tests ORDER BY title")->fetchAll();
+
+        view('teacher/assignments/index', [
+            'title' => 'Atamalar', 'me' => $me, 'items' => $items,
+            'filters' => $f,
+            'institutions' => $institutions, 'campuses' => $campuses, 'tests' => $tests,
+            'gradeLevels' => TeacherStudentController::GRADE_LEVELS,
+            'sections' => TeacherStudentController::SECTIONS,
+        ]);
     }
 
     public static function createForm(): void {

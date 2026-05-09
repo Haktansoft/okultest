@@ -8,16 +8,55 @@ use function App\{db, e, flash, redirect, requireRole, view};
 class AdminTeacherController {
     public static function index(): void {
         $me = requireRole('admin');
-        $items = db()->query("
+
+        $f = [
+            'q'              => trim((string)($_GET['q'] ?? '')),
+            'institution_id' => (int)($_GET['institution_id'] ?? 0),
+            'campus_id'      => (int)($_GET['campus_id'] ?? 0),
+            'status'         => trim((string)($_GET['status'] ?? '')),
+        ];
+
+        $where = ["u.role='teacher'"];
+        $params = [];
+
+        if ($f['campus_id'] > 0) {
+            $where[] = "u.campus_id = ?";
+            $params[] = $f['campus_id'];
+        } elseif ($f['institution_id'] > 0) {
+            $where[] = "u.campus_id IN (SELECT id FROM campuses WHERE institution_id = ?)";
+            $params[] = $f['institution_id'];
+        }
+        if ($f['q'] !== '') {
+            $where[] = "u.full_name LIKE ?";
+            $params[] = '%' . $f['q'] . '%';
+        }
+        if ($f['status'] === 'active')      { $where[] = "u.is_active = 1"; }
+        elseif ($f['status'] === 'passive') { $where[] = "u.is_active = 0"; }
+
+        $sql = "
             SELECT u.*, c.name AS campus_name, i.name AS institution_name,
                    (SELECT COUNT(*) FROM users s WHERE s.role='student' AND s.campus_id=u.campus_id) AS scount
               FROM users u
          LEFT JOIN campuses c ON c.id = u.campus_id
          LEFT JOIN institutions i ON i.id = c.institution_id
-             WHERE u.role='teacher'
-          ORDER BY u.full_name
+             WHERE " . implode(' AND ', $where) . "
+          ORDER BY i.name, c.name, u.full_name
+        ";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        $items = $st->fetchAll();
+
+        $institutions = db()->query("SELECT id, name FROM institutions ORDER BY name")->fetchAll();
+        $campuses = db()->query("
+            SELECT c.id, c.name, c.institution_id, i.name AS institution_name
+              FROM campuses c JOIN institutions i ON i.id = c.institution_id
+          ORDER BY i.name, c.name
         ")->fetchAll();
-        view('admin/teachers/index', ['title' => 'Öğretmenler', 'me' => $me, 'items' => $items]);
+
+        view('admin/teachers/index', [
+            'title' => 'Öğretmenler', 'me' => $me, 'items' => $items,
+            'filters' => $f, 'institutions' => $institutions, 'campuses' => $campuses,
+        ]);
     }
 
     public static function createForm(): void {
