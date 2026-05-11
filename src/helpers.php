@@ -74,7 +74,8 @@ function mediaUrl(?array $media): ?string {
 }
 
 // Düz yazıyı paragraf + maddeler halinde HTML'e dönüştür.
-// Boş satır → yeni paragraf. "- " veya "* " ile başlayan satırlar liste maddesi.
+// Boş satır → yeni paragraf. "- ", "* " veya "• " ile başlayan satırlar liste maddesi.
+// Tek satır içinde 2+ kez geçen " • " ayraçları da maddelere dönüştürülür.
 function formatRichText(?string $text): string {
     $text = trim((string)$text);
     if ($text === '') return '';
@@ -82,6 +83,24 @@ function formatRichText(?string $text): string {
     $blocks = preg_split('/\n{2,}/', $text);
     $html = '';
     foreach ($blocks as $block) {
+        // İçinde inline "•" ayraçları varsa madde listesine çevir
+        if (substr_count($block, '•') >= 2) {
+            $parts = preg_split('/\s*•\s*/u', $block);
+            $parts = array_values(array_filter(array_map('trim', $parts), fn($p) => $p !== ''));
+            if ($parts) {
+                // İlk parça maddeyle başlamıyorsa intro paragraf yap
+                $first = $parts[0];
+                $items = array_slice($parts, 1);
+                if ($items) {
+                    if ($first !== '') $html .= '<p>' . nl2br(e($first)) . '</p>';
+                    $html .= '<ul>';
+                    foreach ($items as $li) $html .= '<li>' . nl2br(e($li)) . '</li>';
+                    $html .= '</ul>';
+                    continue;
+                }
+            }
+        }
+
         $lines = explode("\n", $block);
         $listItems = [];
         $paragraphLines = [];

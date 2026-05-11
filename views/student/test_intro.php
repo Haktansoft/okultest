@@ -1,8 +1,12 @@
-<?php use function App\{e, csrfField}; ?>
+<?php use function App\{e, csrfField, formatRichText}; ?>
 <div class="card mx-auto" style="max-width:680px">
   <div class="card-body p-4">
     <h3 class="mb-1"><?= e($test['title']) ?></h3>
-    <?php if ($test['description']): ?><p class="text-muted"><?= e($test['description']) ?></p><?php endif; ?>
+    <?php if ($test['description']):
+      $descHtml = formatRichText($test['description']);
+    ?>
+      <div class="test-intro-desc text-muted"><?= $descHtml ?: '<p>' . e($test['description']) . '</p>' ?></div>
+    <?php endif; ?>
 
     <ul class="list-unstyled my-3">
       <li><i class="bi bi-list-ol me-2 text-secondary"></i><strong><?= (int)$visibleQ ?></strong> soru</li>
@@ -10,11 +14,6 @@
         <li><i class="bi bi-stopwatch me-2 text-secondary"></i>Süre: <strong><?= (int)$test['time_limit_minutes'] ?> dakika</strong></li>
       <?php else: ?>
         <li><i class="bi bi-stopwatch me-2 text-secondary"></i>Süre limiti yok</li>
-      <?php endif; ?>
-      <?php if ($physQ > 0): ?>
-        <li class="text-warning"><i class="bi bi-info-circle me-2"></i>
-          Bu testte <strong><?= (int)$physQ ?> kağıt-kalem soru</strong> var; onları öğretmeninle birlikte yapacaksın.
-        </li>
       <?php endif; ?>
     </ul>
 

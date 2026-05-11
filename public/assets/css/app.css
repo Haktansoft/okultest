@@ -483,6 +483,25 @@ textarea.form-control { line-height: 1.5; }
 .category-intro .ci-desc-rich li {
   margin: 0.2em 0;
 }
+
+/* Test intro açıklama (paragraf + madde) */
+.test-intro-desc p {
+  margin: 0 0 0.7em;
+}
+.test-intro-desc p:last-child {
+  margin-bottom: 0;
+}
+.test-intro-desc ul {
+  margin: 0 0 0.7em;
+  padding-left: 1.4em;
+}
+.test-intro-desc ul:last-child {
+  margin-bottom: 0;
+}
+.test-intro-desc li {
+  margin: 0.25em 0;
+  line-height: 1.5;
+}
 .category-intro .ci-audio {
   margin-top: 22px; padding: 14px 18px;
   background: #fff; border: 1px solid #e9d5ff; border-radius: 14px;

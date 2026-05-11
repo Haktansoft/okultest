@@ -28,9 +28,6 @@ foreach ($items as $i) {
                 <div class="muted tiny">
                   <?= (int)$a['visible_q'] ?> soru
                   <?php if ($a['time_limit_minutes']): ?> · <?= (int)$a['time_limit_minutes'] ?> dk<?php endif; ?>
-                  <?php if ((int)$a['phys_q'] > 0): ?>
-                    · <span style="color:#92400e">+<?= (int)$a['phys_q'] ?> fiziksel (öğretmenle)</span>
-                  <?php endif; ?>
                 </div>
               </div>
               <span class="badge text-bg-<?= $a['status'] === 'in_progress' ? 'info' : 'secondary' ?>">
