@@ -71,6 +71,18 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
         http_response_code(500); echo "Şablon bulunamadı: public/assets/olgunluk/template.pdf"; return;
     }
 
+    // Cache'i kesin olarak devre dışı bırak ve dosya adını her seferinde benzersiz yap.
+    // Bu sayede tarayıcı/CDN eski PDF'i kullanmaz.
+    if (!headers_sent()) {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+    }
+    $stamp = date('YmdHis') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
+    if (preg_match('/^(.*?)(\.pdf)?$/i', $filename, $m)) {
+        $filename = ($m[1] !== '' ? $m[1] : 'okul-olgunluk') . '-' . $stamp . '.pdf';
+    }
+
     $mpdf = new \Mpdf\Mpdf([
         'mode' => 'utf-8',
         'format' => 'A4',
@@ -211,7 +223,18 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
         }
     }
 
-    $mpdf->Output($filename, \Mpdf\Output\Destination::INLINE);
+    // mPDF'i STRING modunda al ve no-cache header'larıyla biz servis et.
+    // Bu sayede CDN/tarayıcı cache'i kesin geçilir.
+    $pdfBytes = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+    if (!headers_sent()) {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdfBytes));
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+    }
+    echo $pdfBytes;
 }
 
 /** Verilen satırlar arasında ad ile eşleşen yoruma ulaşır (fuzzy match). */

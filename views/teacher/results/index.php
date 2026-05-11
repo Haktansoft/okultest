@@ -38,7 +38,7 @@
             <a class="btn btn-sm btn-outline-primary" href="/teacher/results/<?= (int)$i['id'] ?>/summary-pdf" target="_blank" title="Sonuç PDF">
               <i class="bi bi-file-earmark-pdf"></i> Sonuç PDF
             </a>
-            <a class="btn btn-sm btn-primary" href="/teacher/results/<?= (int)$i['id'] ?>/olgunluk-pdf" target="_blank" title="Okul Olgunluk Raporu">
+            <a class="btn btn-sm btn-primary" href="/teacher/results/<?= (int)$i['id'] ?>/olgunluk-pdf?v=<?= time() ?>" target="_blank" title="Okul Olgunluk Raporu">
               <i class="bi bi-mortarboard"></i> Olgunluk Raporu
             </a>
             <?php if ($i['status'] === 'needs_physical'): ?>
