@@ -108,7 +108,7 @@ function olgunlukCommentFor(string $altBaslik, int $percent): array {
     }
     if (!isset($data[$key])) {
         foreach ($data as $k => $entry) {
-            if (str_contains($k, $key) || str_contains($key, $k)) { $key = $k; break; }
+            if (strpos($k, $key) !== false || strpos($key, $k) !== false) { $key = $k; break; }
         }
     }
     if (!isset($data[$key])) return ['description' => '', 'comment' => ''];

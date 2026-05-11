@@ -151,7 +151,7 @@ class TeacherResultController {
             $match = $bySlug[$key] ?? null;
             if (!$match) {
                 foreach ($bySlug as $sk => $c) {
-                    if (str_contains($sk, $key) || str_contains($key, $sk)) { $match = $c; break; }
+                    if (strpos($sk, $key) !== false || strpos($key, $sk) !== false) { $match = $c; break; }
                 }
             }
             $rows[] = $match ?: ['name' => $label, 'qcount' => 0, 'correct' => 0, 'percent' => 0, 'description' => '', 'comment' => '', 'level' => '—'];

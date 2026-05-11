@@ -107,9 +107,9 @@ $light   = '#fff8ee';
 // Sınıfa göre pill class
 $pillClass = function (string $sinif): string {
     $s = mb_strtolower($sinif, 'UTF-8');
-    if (str_contains($s, 'ileri'))  return 'pill pill-ileri';
-    if (str_contains($s, 'yeterli')) return 'pill pill-yeter';
-    if (str_contains($s, 'sınırda') || str_contains($s, 'sinirda')) return 'pill pill-sinir';
+    if (strpos($s, 'ileri') !== false)  return 'pill pill-ileri';
+    if (strpos($s, 'yeterli') !== false) return 'pill pill-yeter';
+    if (strpos($s, 'sınırda') !== false || strpos($s, 'sinirda') !== false) return 'pill pill-sinir';
     return 'pill pill-dusuk';
 };
 ?>
