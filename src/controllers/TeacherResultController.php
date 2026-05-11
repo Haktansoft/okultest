@@ -141,20 +141,45 @@ class TeacherResultController {
         }
         unset($c);
 
-        // 7 alan için kanonik sıra — DB'deki kategori adıyla eşleştir.
-        $order = ['Kelime Anlama','Cümle Anlama','Günlük Yaşam','Görsel Algı','Erken Matematik','İnce Motor','Yönerge Takibi'];
+        // 7 alan için kanonik sıra + DB kategori adıyla eşleşmek için karakteristik anahtar kelime.
+        // Anahtar, hem DB'deki "Görsel Eşleştirme" hem de orijinal "Görsel Algı"yı yakalar.
+        $order = [
+            ['label' => 'Kelime Anlama',   'keys' => ['kelime']],
+            ['label' => 'Cümle Anlama',    'keys' => ['cumle']],
+            ['label' => 'Günlük Yaşam',    'keys' => ['gunluk']],
+            ['label' => 'Görsel Algı',     'keys' => ['gorsel']],
+            ['label' => 'Erken Matematik', 'keys' => ['matematik']],
+            ['label' => 'İnce Motor',      'keys' => ['incemotor', 'kopya', 'motor']],
+            ['label' => 'Yönerge Takibi',  'keys' => ['yonerge']],
+        ];
         $bySlug = [];
         foreach ($cats as $c) $bySlug[self::slug($c['name'])] = $c;
         $rows = [];
-        foreach ($order as $label) {
+        foreach ($order as $entry) {
+            $label = $entry['label'];
             $key = self::slug($label);
             $match = $bySlug[$key] ?? null;
+            // Önce tam slug, sonra anahtar kelime taraması
+            if (!$match) {
+                foreach ($entry['keys'] as $kw) {
+                    foreach ($bySlug as $sk => $c) {
+                        if (strpos($sk, $kw) !== false) { $match = $c; break 2; }
+                    }
+                }
+            }
+            // Son çare: iki yönlü substring
             if (!$match) {
                 foreach ($bySlug as $sk => $c) {
                     if (strpos($sk, $key) !== false || strpos($key, $sk) !== false) { $match = $c; break; }
                 }
             }
-            $rows[] = $match ?: ['name' => $label, 'qcount' => 0, 'correct' => 0, 'percent' => 0, 'description' => '', 'comment' => '', 'level' => '—'];
+            if ($match) {
+                // Downstream eşleştirme (combined + comment) kanonik label ile çalışsın.
+                $match['name'] = $label;
+                $rows[] = $match;
+            } else {
+                $rows[] = ['name' => $label, 'qcount' => 0, 'correct' => 0, 'percent' => 0, 'description' => '', 'comment' => '', 'level' => '—'];
+            }
         }
 
         // Genel toplam
