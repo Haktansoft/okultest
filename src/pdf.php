@@ -111,7 +111,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
             // ---- Sayısal Değerlendirme Tablosu — 7 satır + GENEL TOPLAM ----
             $rows = $data['rows'] ?? [];
             // Y koordinatları (satır metnine bastırılan üst y — şablon satır merkezleri için)
-            $ys = [47.0, 55.3, 63.6, 71.9, 80.2, 88.5, 96.8, 105.1]; // 7 alan + GENEL TOPLAM
+            $ys = [50.0, 58.3, 66.6, 74.9, 83.2, 91.5, 99.8, 108.1]; // 7 alan + GENEL TOPLAM
             // X koordinatları (sütun başlangıçları, hücre genişlikleri)
             $cols = [
                 ['x' => 73, 'w' => 30, 'key' => 'qcount'],
@@ -146,7 +146,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
             }
 
             // ---- Alan Bazlı Detaylı Analiz — 4 satır ----
-            $combY = [190.5, 200.5, 210.5, 220.5];
+            $combY = [188.5, 198.5, 208.5, 218.5];
             $combo = $data['combined'] ?? [];
             $colsC = [
                 ['x' => 88, 'w' => 27, 'k' => 'q'],
