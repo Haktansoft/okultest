@@ -44,69 +44,6 @@ class TeacherResultController {
         renderPdfFromView('pdf/result', $data, "sonuc-detayli-{$id}.pdf");
     }
 
-    /** Özet sonuç PDF'i — toplam skor, süre, soru sayısı + kategori bazlı grafik */
-    public static function summaryPdf(string $id): void {
-        $me = requireRole('teacher', 'admin');
-        $data = self::loadDetail((int)$id, null);
-        if (!$data) { http_response_code(404); echo "Bulunamadı"; return; }
-        if (!self::canAccess($me, $data)) { http_response_code(403); echo "Yetki yok"; return; }
-
-        $total = count($data['questions']);
-        $answered = 0;
-        $totalPossible = 0;
-        $categories = [];
-
-        foreach ($data['questions'] as $q) {
-            $catName = $q['category_name'] ?? 'Diğer';
-            if (!isset($categories[$catName])) {
-                $categories[$catName] = [
-                    'name' => $catName, 'qcount' => 0, 'answered' => 0,
-                    'possible' => 0.0, 'earned' => 0.0,
-                ];
-            }
-            $cat =& $categories[$catName];
-            $cat['qcount']++;
-
-            $maxOpt = 0.0;
-            foreach ($q['options'] as $o) {
-                $s = (float)$o['score'];
-                if ($s > $maxOpt) $maxOpt = $s;
-            }
-            $cat['possible'] += $maxOpt;
-            $totalPossible   += $maxOpt;
-
-            $isPhys = (bool)$q['is_physical'];
-            $ans = $isPhys ? $q['physical_answer'] : $q['answer'];
-            if ($ans && !empty($ans['selected_option_id'])) {
-                $answered++;
-                $cat['answered']++;
-                $cat['earned'] += isset($ans['option_score']) ? (float)$ans['option_score'] : 0.0;
-            }
-            unset($cat);
-        }
-
-        // Kategori başına yüzde
-        foreach ($categories as &$c) {
-            $c['percent'] = $c['possible'] > 0 ? round(($c['earned'] / $c['possible']) * 100) : 0;
-        }
-        unset($c);
-        $categories = array_values($categories);
-
-        // Kurum logosu — varsa absolute path
-        $logoPath = null;
-        if (!empty($data['assignment']['institution_logo_path'])) {
-            $abs = \App\UPLOAD_PATH . '/' . $data['assignment']['institution_logo_path'];
-            if (is_file($abs)) $logoPath = $abs;
-        }
-
-        $data['total_questions']    = $total;
-        $data['answered_questions'] = $answered;
-        $data['total_possible']     = $totalPossible;
-        $data['categoryStats']      = $categories;
-        $data['logoPath']           = $logoPath;
-        renderPdfFromView('pdf/result_summary', $data, "sonuc-{$id}.pdf");
-    }
-
     /** Okul Olgunluk Raporu — Benego şablonuna uygun, 7 alan + birleşik tablo. */
     public static function olgunlukPdf(string $id): void {
         $me = requireRole('teacher', 'admin');

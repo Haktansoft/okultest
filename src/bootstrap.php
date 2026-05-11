@@ -161,7 +161,6 @@ $r->get ('/teacher/assignments/{id}/run',    ['App\\Controllers\\TeacherAssignme
 $r->get ('/teacher/results',                 ['App\\Controllers\\TeacherResultController', 'index']);
 $r->get ('/teacher/results/{id}',            ['App\\Controllers\\TeacherResultController', 'show']);
 $r->get ('/teacher/results/{id}/pdf',        ['App\\Controllers\\TeacherResultController', 'pdf']);
-$r->get ('/teacher/results/{id}/summary-pdf',['App\\Controllers\\TeacherResultController', 'summaryPdf']);
 $r->get ('/teacher/results/{id}/olgunluk-pdf',['App\\Controllers\\TeacherResultController', 'olgunlukPdf']);
 $r->get ('/teacher/incomplete-pdf/{id}',     ['App\\Controllers\\TeacherResultController', 'incompletePdf']);
 
