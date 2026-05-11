@@ -146,7 +146,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
             }
 
             // ---- Alan Bazlı Detaylı Analiz — 4 satır ----
-            $combY = [188.5, 198.5, 208.5, 218.5];
+            $combY = [189.5, 199.5, 209.5, 219.5];
             $combo = $data['combined'] ?? [];
             $colsC = [
                 ['x' => 88, 'w' => 27, 'k' => 'q'],
