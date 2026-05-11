@@ -4,14 +4,26 @@ declare(strict_types=1);
 namespace App;
 
 /**
- * Bağımlılıksız basit XLSX (xlsx) okuyucu — sadece ilk sayfa.
+ * Bağımlılıksız basit XLSX (xlsx) okuyucu.
  * Salt-okunur, formül değerlendirmez, stil bilgisi okumaz.
  *
- * Dönüş: array<int, array<string, string>>
+ * readXlsx() → sadece ilk sayfayı döner (geriye uyumlu).
+ * readXlsxAllSheets() → tüm sayfaları sayfa adına göre döner.
+ *
+ * Dönüş satırı: array<int, array<string, string>>
  *   Her satır kolon harfine göre indekslenir: ['A' => 'soru', 'B' => '...', ...]
  *   Header satırı (genelde 1.) dahil; çağıran istediği indekslemeyi yapar.
  */
 function readXlsx(string $path): array {
+    $all = readXlsxAllSheets($path);
+    return $all ? reset($all) : [];
+}
+
+/**
+ * Tüm sayfaları okur, sayfa adına göre indeksler.
+ * @return array<string, array<int, array<string,string>>>
+ */
+function readXlsxAllSheets(string $path): array {
     if (!is_file($path)) {
         throw new \RuntimeException("XLSX bulunamadı: $path");
     }
@@ -45,34 +57,55 @@ function readXlsx(string $path): array {
             }
         }
 
-        // İlk sayfa
-        $sheetFile = $tmp . '/xl/worksheets/sheet1.xml';
-        if (!is_file($sheetFile)) {
-            throw new \RuntimeException("XLSX'te sheet1.xml yok.");
-        }
-        $sheet = new \SimpleXMLElement(file_get_contents($sheetFile));
-
-        $rows = [];
-        foreach ($sheet->sheetData->row as $row) {
-            $r = [];
-            foreach ($row->c as $c) {
-                $ref  = (string)$c['r'];
-                $col  = preg_replace('/\d+/', '', $ref);
-                $type = (string)$c['t'];
-                $val  = (string)$c->v;
-                if ($type === 's') {
-                    $val = $strings[(int)$val] ?? '';
-                } elseif ($type === 'inlineStr') {
-                    $val = (string)$c->is->t;
-                } elseif ($type === 'b') {
-                    $val = $val === '1' ? 'TRUE' : 'FALSE';
-                }
-                // Sayı / tarih → string olarak kalır; çağıran yorumlar
-                $r[$col] = $val;
+        // Sayfa adı → dosya yolu eşlemesi (workbook.xml + rels)
+        $sheetIndex = []; // name → sheetN.xml
+        $wbFile = $tmp . '/xl/workbook.xml';
+        $relsFile = $tmp . '/xl/_rels/workbook.xml.rels';
+        if (is_file($wbFile) && is_file($relsFile)) {
+            $wb = new \SimpleXMLElement(file_get_contents($wbFile));
+            $rels = new \SimpleXMLElement(file_get_contents($relsFile));
+            $relMap = [];
+            foreach ($rels->Relationship as $rel) {
+                $relMap[(string)$rel['Id']] = (string)$rel['Target']; // ör. worksheets/sheet2.xml
             }
-            $rows[] = $r;
+            foreach ($wb->sheets->sheet as $s) {
+                $name = (string)$s['name'];
+                $rid  = (string)$s->attributes('r', true)['id'];
+                $target = $relMap[$rid] ?? '';
+                if ($target) $sheetIndex[$name] = $tmp . '/xl/' . ltrim($target, '/');
+            }
         }
-        return $rows;
+        if (!$sheetIndex) {
+            // Geri düşüş: tek sayfa
+            $sheetIndex = ['Sheet1' => $tmp . '/xl/worksheets/sheet1.xml'];
+        }
+
+        $out = [];
+        foreach ($sheetIndex as $name => $sheetFile) {
+            if (!is_file($sheetFile)) continue;
+            $sheet = new \SimpleXMLElement(file_get_contents($sheetFile));
+            $rows = [];
+            foreach ($sheet->sheetData->row as $row) {
+                $r = [];
+                foreach ($row->c as $c) {
+                    $ref  = (string)$c['r'];
+                    $col  = preg_replace('/\d+/', '', $ref);
+                    $type = (string)$c['t'];
+                    $val  = (string)$c->v;
+                    if ($type === 's') {
+                        $val = $strings[(int)$val] ?? '';
+                    } elseif ($type === 'inlineStr') {
+                        $val = (string)$c->is->t;
+                    } elseif ($type === 'b') {
+                        $val = $val === '1' ? 'TRUE' : 'FALSE';
+                    }
+                    $r[$col] = $val;
+                }
+                $rows[] = $r;
+            }
+            $out[$name] = $rows;
+        }
+        return $out;
     } finally {
         // Geçici dosyaları temizle
         $rm = function ($p) use (&$rm) {

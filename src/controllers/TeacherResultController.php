@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use function App\{db, e, flash, redirect, requireRole, view, formatDuration, renderPdfFromView};
+use function App\{db, e, flash, redirect, requireRole, view, formatDuration, renderPdfFromView, olgunlukCommentFor, olgunlukLevelFor};
 
 class TeacherResultController {
     public static function index(): void {
@@ -105,6 +105,114 @@ class TeacherResultController {
         $data['categoryStats']      = $categories;
         $data['logoPath']           = $logoPath;
         renderPdfFromView('pdf/result_summary', $data, "sonuc-{$id}.pdf");
+    }
+
+    /** Okul Olgunluk Raporu — Benego şablonuna uygun, 7 alan + birleşik tablo. */
+    public static function olgunlukPdf(string $id): void {
+        $me = requireRole('teacher', 'admin');
+        $data = self::loadDetail((int)$id, null);
+        if (!$data) { http_response_code(404); echo "Bulunamadı"; return; }
+        if (!self::canAccess($me, $data)) { http_response_code(403); echo "Yetki yok"; return; }
+
+        // Kategori başına: soru sayısı + doğru sayısı (her doğru = 1 puan)
+        // "Doğru" = seçilen şıkkın puanı, kategorideki en yüksek seçenek puanına eşitse doğru sayılır.
+        $cats = [];
+        foreach ($data['questions'] as $q) {
+            $name = $q['category_name'] ?? 'Diğer';
+            if (!isset($cats[$name])) $cats[$name] = ['name' => $name, 'qcount' => 0, 'correct' => 0];
+            $cats[$name]['qcount']++;
+
+            $maxOpt = 0.0;
+            foreach ($q['options'] as $o) {
+                $s = (float)$o['score'];
+                if ($s > $maxOpt) $maxOpt = $s;
+            }
+            $ans = $q['is_physical'] ? $q['physical_answer'] : $q['answer'];
+            if ($ans && isset($ans['option_score']) && (float)$ans['option_score'] >= $maxOpt && $maxOpt > 0) {
+                $cats[$name]['correct']++;
+            }
+        }
+        foreach ($cats as &$c) {
+            $c['percent'] = $c['qcount'] > 0 ? (int)round(($c['correct'] / $c['qcount']) * 100) : 0;
+            $cmt = olgunlukCommentFor($c['name'], $c['percent']);
+            $c['description'] = $cmt['description'];
+            $c['comment']     = $cmt['comment'];
+            $c['level']       = self::olgunlukLevelLabel($c['percent']);
+        }
+        unset($c);
+
+        // 7 alan için kanonik sıra — DB'deki kategori adıyla eşleştir.
+        $order = ['Kelime Anlama','Cümle Anlama','Günlük Yaşam','Görsel Algı','Erken Matematik','İnce Motor','Yönerge Takibi'];
+        $bySlug = [];
+        foreach ($cats as $c) $bySlug[self::slug($c['name'])] = $c;
+        $rows = [];
+        foreach ($order as $label) {
+            $key = self::slug($label);
+            $match = $bySlug[$key] ?? null;
+            if (!$match) {
+                foreach ($bySlug as $sk => $c) {
+                    if (str_contains($sk, $key) || str_contains($key, $sk)) { $match = $c; break; }
+                }
+            }
+            $rows[] = $match ?: ['name' => $label, 'qcount' => 0, 'correct' => 0, 'percent' => 0, 'description' => '', 'comment' => '', 'level' => '—'];
+        }
+
+        // Genel toplam
+        $totalQ = array_sum(array_column($rows, 'qcount'));
+        $totalC = array_sum(array_column($rows, 'correct'));
+        $totalPct = $totalQ > 0 ? (int)round(($totalC / $totalQ) * 100) : 0;
+        $overall = olgunlukLevelFor($totalPct);
+
+        // Birleşik analiz (Dil/Bilişsel/Psikomotor/Dikkat-Sıralama)
+        $combineKeys = [
+            'Dil ve İletişim Becerileri (Kelime ve Cümle Anlama)' => ['Kelime Anlama','Cümle Anlama'],
+            'Bilişsel Beceriler (Günlük Yaşam ve Matematik)'       => ['Günlük Yaşam','Erken Matematik'],
+            'Psikomotor Gelişimi (İnce Motor)'                     => ['İnce Motor'],
+            'Dikkat ve Sıralama (Görsel Algı / Yönerge Takibi)'    => ['Görsel Algı','Yönerge Takibi'],
+        ];
+        $combined = [];
+        foreach ($combineKeys as $label => $parts) {
+            $q = $c2 = 0;
+            foreach ($parts as $p) {
+                foreach ($rows as $r) {
+                    if (self::slug($r['name']) === self::slug($p)) { $q += $r['qcount']; $c2 += $r['correct']; }
+                }
+            }
+            $pct = $q > 0 ? (int)round(($c2 / $q) * 100) : 0;
+            $combined[] = ['label' => $label, 'q' => $q, 'c' => $c2, 'pct' => $pct, 'level' => self::olgunlukLevelLabel($pct)];
+        }
+
+        // Kurum logosu
+        $logoPath = null;
+        if (!empty($data['assignment']['institution_logo_path'])) {
+            $abs = \App\UPLOAD_PATH . '/' . $data['assignment']['institution_logo_path'];
+            if (is_file($abs)) $logoPath = $abs;
+        }
+
+        $assetsDir = dirname(__DIR__, 2) . '/public/assets/olgunluk';
+
+        $data['olgunlukRows']   = $rows;
+        $data['olgunlukCombo']  = $combined;
+        $data['olgunlukTotalQ'] = $totalQ;
+        $data['olgunlukTotalC'] = $totalC;
+        $data['olgunlukTotalP'] = $totalPct;
+        $data['olgunlukLevel']  = $overall;
+        $data['logoPath']       = $logoPath;
+        $data['assetsDir']      = $assetsDir;
+
+        renderPdfFromView('pdf/okul_olgunluk', $data, "okul-olgunluk-{$id}.pdf");
+    }
+
+    private static function olgunlukLevelLabel(int $pct): string {
+        $lvl = olgunlukLevelFor($pct);
+        return $lvl['sinif'] ?? '—';
+    }
+
+    private static function slug(string $s): string {
+        $map = ['İ'=>'i','I'=>'i','Ş'=>'s','Ğ'=>'g','Ü'=>'u','Ö'=>'o','Ç'=>'c','ç'=>'c','ğ'=>'g','ı'=>'i','ö'=>'o','ş'=>'s','ü'=>'u'];
+        $s = strtr($s, $map);
+        $s = mb_strtolower($s, 'UTF-8');
+        return preg_replace('/[^a-z0-9]+/u', '', $s) ?? '';
     }
 
     public static function incompletePdf(string $id): void {

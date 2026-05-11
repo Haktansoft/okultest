@@ -38,6 +38,9 @@
             <a class="btn btn-sm btn-outline-primary" href="/teacher/results/<?= (int)$i['id'] ?>/summary-pdf" target="_blank" title="Sonuç PDF">
               <i class="bi bi-file-earmark-pdf"></i> Sonuç PDF
             </a>
+            <a class="btn btn-sm btn-primary" href="/teacher/results/<?= (int)$i['id'] ?>/olgunluk-pdf" target="_blank" title="Okul Olgunluk Raporu">
+              <i class="bi bi-mortarboard"></i> Olgunluk Raporu
+            </a>
             <?php if ($i['status'] === 'needs_physical'): ?>
               <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>" title="Kağıt-kalem sorularını gir">
                 <i class="bi bi-pencil-square"></i> Kağıt-Kalem gir

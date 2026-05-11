@@ -18,6 +18,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/pdf.php';
 require_once __DIR__ . '/xlsx_reader.php';
+require_once __DIR__ . '/olgunluk_yorum.php';
 
 foreach (glob(__DIR__ . '/controllers/*.php') as $cf) {
     require_once $cf;
@@ -161,6 +162,7 @@ $r->get ('/teacher/results',                 ['App\\Controllers\\TeacherResultCo
 $r->get ('/teacher/results/{id}',            ['App\\Controllers\\TeacherResultController', 'show']);
 $r->get ('/teacher/results/{id}/pdf',        ['App\\Controllers\\TeacherResultController', 'pdf']);
 $r->get ('/teacher/results/{id}/summary-pdf',['App\\Controllers\\TeacherResultController', 'summaryPdf']);
+$r->get ('/teacher/results/{id}/olgunluk-pdf',['App\\Controllers\\TeacherResultController', 'olgunlukPdf']);
 $r->get ('/teacher/incomplete-pdf/{id}',     ['App\\Controllers\\TeacherResultController', 'incompletePdf']);
 
 $r->get ('/teacher/physical',                ['App\\Controllers\\TeacherPhysicalController', 'index']);

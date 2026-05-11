@@ -9,6 +9,7 @@ $a = $assignment;
   </div>
   <div class="d-flex gap-2 flex-wrap">
     <a class="btn btn-sm btn-primary" target="_blank" href="/teacher/results/<?= (int)$a['id'] ?>/summary-pdf"><i class="bi bi-file-earmark-pdf"></i> Sonuç PDF</a>
+    <a class="btn btn-sm btn-success" target="_blank" href="/teacher/results/<?= (int)$a['id'] ?>/olgunluk-pdf"><i class="bi bi-mortarboard"></i> Olgunluk Raporu</a>
     <a class="btn btn-sm btn-outline-secondary" target="_blank" href="/teacher/results/<?= (int)$a['id'] ?>/pdf"><i class="bi bi-file-earmark-text"></i> Detaylı Sonuç PDF</a>
     <a class="btn btn-sm btn-outline-secondary" target="_blank" href="/teacher/incomplete-pdf/<?= (int)$a['id'] ?>"><i class="bi bi-file-earmark-pdf"></i> Eksikler PDF</a>
     <?php if ($a['status'] === 'needs_physical'): ?>
