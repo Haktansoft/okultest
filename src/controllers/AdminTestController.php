@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use function App\{db, e, flash, redirect, requireRole, view};
+use function App\{db, e, flash, json, redirect, requireRole, view};
 
 class AdminTestController {
     public static function index(): void {
@@ -136,6 +136,7 @@ class AdminTestController {
             foreach ($orders as $qid) {
                 $upd->execute([$i++, $id, $qid]);
             }
+            if (!empty($_POST['ajax'])) { json(['ok' => true, 'count' => count($orders)]); }
             flash('ok', 'Sıralama güncellendi.');
         }
         redirect("/admin/tests/$id/questions");

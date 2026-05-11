@@ -1134,3 +1134,57 @@ hr { border-color: var(--c-border); opacity: 1; }
   text-align: center; padding: 40px 20px; color: var(--c-text-mute);
 }
 .empty-state .icon { font-size: 2.4rem; opacity: .6; margin-bottom: 8px; }
+
+/* ==== Soru sıralama (drag & drop) ==== */
+.reorder-item {
+  cursor: grab;
+  position: relative;
+  user-select: none;
+  transition: background-color .12s ease, box-shadow .12s ease;
+}
+.reorder-item:hover {
+  background: #fafbfd;
+}
+.reorder-item:hover .reorder-grip {
+  color: var(--c-primary);
+}
+.reorder-item:active { cursor: grabbing; }
+.reorder-item.dragging {
+  opacity: .45;
+  background: var(--c-primary-soft);
+  box-shadow: 0 6px 18px rgba(79,70,229,.18);
+}
+.reorder-grip {
+  font-size: 1.15rem;
+  cursor: grab;
+}
+.reorder-num {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Drop hedef göstergesi — kalın renkli çizgi */
+.reorder-item.drop-before::before,
+.reorder-item.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 8px; right: 8px;
+  height: 4px;
+  background: var(--c-primary);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(79,70,229,.18);
+  pointer-events: none;
+  z-index: 5;
+}
+.reorder-item.drop-before::before { top: -2px; }
+.reorder-item.drop-after::after  { bottom: -2px; }
+
+/* Drop indicator uçlarındaki noktalar */
+.reorder-item.drop-before::before,
+.reorder-item.drop-after::after {
+  background-image: radial-gradient(circle at 0% 50%, var(--c-primary) 4px, transparent 4px),
+                    radial-gradient(circle at 100% 50%, var(--c-primary) 4px, transparent 4px),
+                    linear-gradient(var(--c-primary), var(--c-primary));
+}

@@ -19,18 +19,22 @@
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Bu testteki sorular (<?= count($assigned) ?>)</span>
-        <?php if ($isAdmin): ?><span class="muted tiny">Sürükleyerek sırala</span><?php endif; ?>
+        <?php if ($isAdmin): ?>
+          <span class="d-flex align-items-center gap-2">
+            <span class="muted tiny">Sürükleyerek sırala</span>
+            <span id="reorder-status" class="tiny" aria-live="polite"></span>
+          </span>
+        <?php endif; ?>
       </div>
       <div class="card-body p-0">
         <ul id="assigned-list" class="list-group list-group-flush" style="border-radius: 0;">
           <?php if (!$assigned): ?>
             <li class="list-group-item p-0"><div class="empty-state"><div class="icon"><i class="bi bi-arrow-right-circle"></i></div><?= $isAdmin ? 'Sağdan soru ekle.' : 'Bu testte henüz soru yok.' ?></div></li>
           <?php else: foreach ($assigned as $idx => $q): ?>
-            <li class="list-group-item d-flex align-items-center" data-id="<?= (int)$q['id'] ?>" <?= $isAdmin ? 'draggable="true" style="cursor:move"' : '' ?>>
+            <li class="list-group-item reorder-item d-flex align-items-center" data-id="<?= (int)$q['id'] ?>" <?= $isAdmin ? 'draggable="true"' : '' ?>>
+              <span class="reorder-num badge text-bg-light me-2"><?= $idx + 1 ?></span>
               <?php if ($isAdmin): ?>
-                <i class="bi bi-grip-vertical muted me-2"></i>
-              <?php else: ?>
-                <span class="badge text-bg-light me-2">#<?= $idx + 1 ?></span>
+                <i class="bi bi-grip-vertical reorder-grip muted me-2"></i>
               <?php endif; ?>
               <div class="flex-grow-1">
                 <div><?= e(mb_strimwidth(strip_tags($q['prompt']),0,90,'…','UTF-8')) ?></div>
@@ -51,16 +55,6 @@
           <?php endforeach; endif; ?>
         </ul>
       </div>
-      <?php if ($isAdmin && $assigned): ?>
-      <div class="card-footer">
-        <form method="post" action="/admin/tests/<?= (int)$test['id'] ?>/questions" class="m-0" id="reorder-form">
-          <?= csrfField() ?>
-          <input type="hidden" name="action" value="reorder">
-          <input type="hidden" name="order" id="order-input">
-          <button class="btn btn-sm btn-primary" id="save-order" style="display:none">Sıralamayı kaydet</button>
-        </form>
-      </div>
-      <?php endif; ?>
     </div>
   </div>
 
@@ -135,26 +129,93 @@
 <?php if ($isAdmin): ?>
 <script>
 (() => {
-  // Atanmış sorular: sürükle-sırala
+  // Atanmış sorular: sürükle-sırala (drop indicator + otomatik kaydet)
   const list = document.getElementById('assigned-list');
   if (list) {
+    const status = document.getElementById('reorder-status');
+    const CSRF   = <?= json_encode(\App\csrfToken()) ?>;
+    const URL    = '/admin/tests/<?= (int)$test['id'] ?>/questions';
     let dragSrc = null;
+
+    function clearIndicators() {
+      list.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+        el.classList.remove('drop-before', 'drop-after');
+      });
+    }
+    function renumber() {
+      let i = 1;
+      list.querySelectorAll('li[data-id] .reorder-num').forEach(n => { n.textContent = i++; });
+    }
+    function setStatus(html, kind) {
+      if (!status) return;
+      status.className = 'tiny ' + (kind === 'ok' ? 'text-success' : kind === 'err' ? 'text-danger' : 'muted');
+      status.innerHTML = html;
+    }
+
+    let saveTimer = null;
+    async function saveOrder() {
+      const ids = [...list.querySelectorAll('li[data-id]')].map(li => li.dataset.id).join(',');
+      setStatus('<i class="bi bi-arrow-repeat"></i> Kaydediliyor…');
+      try {
+        const fd = new FormData();
+        fd.set('_csrf', CSRF);
+        fd.set('action', 'reorder');
+        fd.set('order', ids);
+        fd.set('ajax', '1');
+        const res = await fetch(URL, { method: 'POST', body: fd, credentials: 'same-origin' });
+        if (res.ok || res.status === 302) {
+          setStatus('<i class="bi bi-check2"></i> Sıralama kaydedildi', 'ok');
+          setTimeout(() => setStatus('', ''), 2500);
+        } else {
+          setStatus('<i class="bi bi-x-octagon"></i> Kaydedilemedi', 'err');
+        }
+      } catch (e) {
+        setStatus('<i class="bi bi-wifi-off"></i> Bağlantı hatası', 'err');
+      }
+    }
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveOrder, 300);
+    }
+
     list.querySelectorAll('li[data-id]').forEach(li => {
-      li.addEventListener('dragstart', e => { dragSrc = li; li.style.opacity = .5; });
-      li.addEventListener('dragend',   e => { li.style.opacity = 1; });
-      li.addEventListener('dragover',  e => { e.preventDefault(); });
-      li.addEventListener('drop',      e => {
+      li.addEventListener('dragstart', e => {
+        dragSrc = li;
+        li.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/plain', li.dataset.id); } catch {}
+        }
+      });
+      li.addEventListener('dragend', () => {
+        li.classList.remove('dragging');
+        clearIndicators();
+      });
+      li.addEventListener('dragover', e => {
         e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         if (!dragSrc || dragSrc === li) return;
         const rect = li.getBoundingClientRect();
-        const after = (e.clientY - rect.top) > rect.height/2;
-        list.insertBefore(dragSrc, after ? li.nextSibling : li);
-        document.getElementById('save-order').style.display = '';
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        clearIndicators();
+        li.classList.add(after ? 'drop-after' : 'drop-before');
       });
-    });
-    document.getElementById('reorder-form')?.addEventListener('submit', () => {
-      const ids = [...list.querySelectorAll('li[data-id]')].map(li => li.dataset.id);
-      document.getElementById('order-input').value = ids.join(',');
+      li.addEventListener('dragleave', e => {
+        // sadece kendi içinde değil dışına çıkınca temizle
+        if (!li.contains(e.relatedTarget)) {
+          li.classList.remove('drop-before', 'drop-after');
+        }
+      });
+      li.addEventListener('drop', e => {
+        e.preventDefault();
+        clearIndicators();
+        if (!dragSrc || dragSrc === li) return;
+        const rect = li.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        list.insertBefore(dragSrc, after ? li.nextSibling : li);
+        renumber();
+        scheduleSave();
+      });
     });
   }
 
