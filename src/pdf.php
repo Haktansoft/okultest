@@ -121,15 +121,17 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
 
         if ($p === 3) {
             // ---- Sayısal Değerlendirme Tablosu — 7 satır + GENEL TOPLAM ----
+            // Koordinatlar rapor.pdf'in piksel-perfect grid line tespitinden gelir (300 DPI tarama).
+            // Hat tespit komutu: tools/detect_grid.py
             $rows = $data['rows'] ?? [];
-            // Y koordinatları (satır metnine bastırılan üst y — şablon satır merkezleri için)
-            $ys = [50.0, 58.3, 66.6, 74.9, 83.2, 91.5, 99.8, 108.1]; // 7 alan + GENEL TOPLAM
-            // X koordinatları (sütun başlangıçları, hücre genişlikleri)
+            // Satır merkez Y'leri (row_center) - 2mm (text üst offset)
+            $ys = [49.63, 57.59, 65.55, 73.54, 81.54, 89.50, 97.46, 105.46];
+            // Sütun: hücre sol-x ve hücre genişliği (text-align:center hücre içinde merkezleyecek)
             $cols = [
-                ['x' => 73, 'w' => 30, 'key' => 'qcount'],
-                ['x' => 105,'w' => 30, 'key' => 'correct'],
-                ['x' => 137,'w' => 30, 'key' => 'percent'],
-                ['x' => 167,'w' => 36, 'key' => 'level'],
+                ['x' => 68.56,  'w' => 28.36, 'key' => 'qcount'],
+                ['x' => 96.92,  'w' => 28.44, 'key' => 'correct'],
+                ['x' => 125.36, 'w' => 28.52, 'key' => 'percent'],
+                ['x' => 153.88, 'w' => 36.06, 'key' => 'level'],
             ];
             foreach ($rows as $i => $r) {
                 if (!isset($ys[$i])) break;
@@ -143,12 +145,12 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
                     );
                 }
             }
-            // GENEL TOPLAM
+            // GENEL TOPLAM — son satır, Sayısal tablosuyla aynı sütun konumları
             $totals = [
-                ['x' => 73, 'w' => 30, 'v' => (string)($data['totalQ'] ?? '')],
-                ['x' => 105,'w' => 30, 'v' => (string)($data['totalC'] ?? '')],
-                ['x' => 137,'w' => 30, 'v' => (string)($data['totalP'] ?? '').'%'],
-                ['x' => 167,'w' => 36, 'v' => (string)($data['level']['sinif'] ?? '—')],
+                ['x' => 68.56,  'w' => 28.36, 'v' => (string)($data['totalQ'] ?? '')],
+                ['x' => 96.92,  'w' => 28.44, 'v' => (string)($data['totalC'] ?? '')],
+                ['x' => 125.36, 'w' => 28.52, 'v' => (string)($data['totalP'] ?? '').'%'],
+                ['x' => 153.88, 'w' => 36.06, 'v' => (string)($data['level']['sinif'] ?? '—')],
             ];
             foreach ($totals as $t) {
                 $mpdf->WriteFixedPosHTML(
@@ -158,13 +160,14 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
             }
 
             // ---- Alan Bazlı Detaylı Analiz — 4 satır ----
-            $combY = [189.5, 199.5, 209.5, 219.5];
+            // Satır merkezleri (row centers): [189.86, 200.57, 211.32, 222.07] — text top = center - 2
+            $combY = [187.86, 198.57, 209.32, 220.07];
             $combo = $data['combined'] ?? [];
             $colsC = [
-                ['x' => 88, 'w' => 27, 'k' => 'q'],
-                ['x' => 115,'w' => 27, 'k' => 'c'],
-                ['x' => 142,'w' => 23, 'k' => 'pct'],
-                ['x' => 165,'w' => 38, 'k' => 'level'],
+                ['x' => 77.45,  'w' => 26.66, 'k' => 'q'],
+                ['x' => 104.11, 'w' => 28.53, 'k' => 'c'],
+                ['x' => 132.64, 'w' => 24.37, 'k' => 'pct'],
+                ['x' => 157.01, 'w' => 32.93, 'k' => 'level'],
             ];
             foreach ($combo as $i => $r) {
                 if (!isset($combY[$i])) break;
@@ -179,18 +182,20 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
                 }
             }
 
-            // ---- Olgunluk Düzeyi Tablosu — tek satır ----
+            // ---- Olgunluk Düzeyi Tablosu — tek veri satırı (center y = 267.64) ----
             $lvl = $data['level'] ?? null;
             if ($lvl) {
-                $rowY = 265;
+                $rowY = 265.64; // 267.64 - 2 (text üst offset)
+                // Sütunlar (auto-detect): Başarı x=20.06 w=23.62, Sınıf x=43.68 w=33.18,
+                //                         Karşılık x=76.86 w=33.26, Tavsiyemiz x=110.12 w=79.82
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cell'].'font-weight:bold;">'.htmlspecialchars($lvl['label'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                    15, $rowY, 28, 8, 'hidden');
+                    20.06, $rowY, 23.62, 8, 'hidden');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'">'.htmlspecialchars($lvl['sinif'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                    44, $rowY, 39, 8, 'hidden');
+                    43.68, $rowY, 33.18, 8, 'hidden');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'">'.htmlspecialchars($lvl['karsilik'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                    84, $rowY, 44, 8, 'hidden');
-                $mpdf->WriteFixedPosHTML('<div style="'.$S['cellL'].'">'.htmlspecialchars($lvl['tavsiye'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                    129, $rowY - 1, 66, 14, 'visible');
+                    76.86, $rowY, 33.26, 8, 'hidden');
+                $mpdf->WriteFixedPosHTML('<div style="font-family:dejavusans;font-size:8.5pt;color:#1a2a3a;text-align:center;line-height:1.25;">'.htmlspecialchars($lvl['tavsiye'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
+                    110.12, $rowY - 1, 79.82, 13, 'visible');
             }
         }
 
