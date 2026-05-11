@@ -260,17 +260,17 @@
     card.appendChild(prompt);
 
     if (q.prompt_media) {
-      card.appendChild(renderMedia(q.prompt_media, 'prompt-media mt-3'));
+      card.appendChild(renderMedia(q.prompt_media, 'prompt-media'));
     }
     if (q.prompt_audio) {
-      card.appendChild(renderMedia(q.prompt_audio, 'prompt-media prompt-audio mt-3'));
+      card.appendChild(renderMedia(q.prompt_audio, 'prompt-media prompt-audio'));
     }
 
     const opts = document.createElement('div');
     const hasMediaOpt = q.options.some(o => o && o.media);
     const longestLabel = q.options.reduce((m, o) => Math.max(m, ((o && o.label) || '').length), 0);
     const textStacked = !hasMediaOpt && longestLabel > 22;
-    opts.className = 'options-grid mt-4'
+    opts.className = 'options-grid'
       + (hasMediaOpt ? ' has-media' : '')
       + (textStacked ? ' text-stacked' : '');
     let blankBtnRef = null;

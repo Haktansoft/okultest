@@ -1,5 +1,5 @@
 <?php use function App\{e, csrfToken, mediaUrl, formatRichText}; ?>
-<div class="test-runner test-runner-student">
+<div class="test-runner test-runner-student test-runner-compact">
   <main class="test-main">
     <div class="test-topbar">
       <div class="test-topbar-left">
