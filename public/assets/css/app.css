@@ -940,6 +940,56 @@ textarea.form-control { line-height: 1.5; }
   background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
 }
 
+/* Fiziksel sorular: tek satırlı kompakt şıklar — toplu öğretmen ekranında ekrana sığsın */
+.test-runner .question-card-physical {
+  padding: 18px 22px;
+}
+.test-runner .question-card-physical .question-prompt {
+  font-size: 1.1rem;
+}
+.test-runner .question-card-physical .prompt-media {
+  margin-top: 10px;
+  padding: 8px;
+}
+.test-runner .question-card-physical .prompt-media img,
+.test-runner .question-card-physical .prompt-media video {
+  max-height: 160px;
+}
+.test-runner .question-card-physical .options-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.test-runner .question-card-physical .options-grid .option {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+}
+.test-runner .question-card-physical .opt-letter {
+  margin-bottom: 0;
+  flex-shrink: 0;
+  align-self: center;
+}
+.test-runner .question-card-physical .opt-body {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.test-runner .question-card-physical .opt-label {
+  font-size: 15px;
+  line-height: 1.35;
+}
+.test-runner .question-card-physical .opt-media-slot {
+  height: 64px;
+  flex-shrink: 0;
+  max-width: 30%;
+}
+.test-runner .question-card-physical .question-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
 @media (max-width: 991.98px) {
   .test-runner { grid-template-columns: 1fr; }
   .test-runner .qnav { position: static; max-height: none; }
