@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use function App\{db, e, flash, redirect, requireRole, view, formatDuration, renderPdfFromView, olgunlukCommentFor, olgunlukLevelFor};
+use function App\{db, e, flash, redirect, requireRole, view, formatDuration, renderPdfFromView, renderOlgunlukPdf, olgunlukCommentFor, olgunlukLevelFor};
 
 class TeacherResultController {
     public static function index(): void {
@@ -182,25 +182,20 @@ class TeacherResultController {
             $combined[] = ['label' => $label, 'q' => $q, 'c' => $c2, 'pct' => $pct, 'level' => self::olgunlukLevelLabel($pct)];
         }
 
-        // Kurum logosu
-        $logoPath = null;
-        if (!empty($data['assignment']['institution_logo_path'])) {
-            $abs = \App\UPLOAD_PATH . '/' . $data['assignment']['institution_logo_path'];
-            if (is_file($abs)) $logoPath = $abs;
-        }
+        // Uygulama tarihi
+        $uygTs = $data['assignment']['finished_at'] ?? $data['assignment']['started_at'] ?? null;
+        $uygDate = $uygTs ? date('d.m.Y', strtotime($uygTs)) : '';
 
-        $assetsDir = dirname(__DIR__, 2) . '/public/assets/olgunluk';
-
-        $data['olgunlukRows']   = $rows;
-        $data['olgunlukCombo']  = $combined;
-        $data['olgunlukTotalQ'] = $totalQ;
-        $data['olgunlukTotalC'] = $totalC;
-        $data['olgunlukTotalP'] = $totalPct;
-        $data['olgunlukLevel']  = $overall;
-        $data['logoPath']       = $logoPath;
-        $data['assetsDir']      = $assetsDir;
-
-        renderPdfFromView('pdf/okul_olgunluk', $data, "okul-olgunluk-{$id}.pdf");
+        renderOlgunlukPdf([
+            'student_name' => $data['assignment']['student_name'] ?? '',
+            'date'         => $uygDate,
+            'rows'         => $rows,
+            'combined'     => $combined,
+            'totalQ'       => $totalQ,
+            'totalC'       => $totalC,
+            'totalP'       => $totalPct,
+            'level'        => $overall,
+        ], "okul-olgunluk-{$id}.pdf");
     }
 
     private static function olgunlukLevelLabel(int $pct): string {
