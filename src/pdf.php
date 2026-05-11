@@ -112,11 +112,11 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
             // (auto-detect: dotted lines at y=255.8mm ve y=273.7mm; 11pt baseline offset ≈3.5mm)
             $mpdf->WriteFixedPosHTML(
                 '<div style="'.$S['val'].'">'.htmlspecialchars($data['student_name'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                115, 252.5, 60, 8, 'hidden'
+                115, 250.0, 60, 8, 'hidden'
             );
             $mpdf->WriteFixedPosHTML(
                 '<div style="'.$S['val'].'">'.htmlspecialchars($data['date'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                115, 270.5, 60, 8, 'hidden'
+                115, 268.0, 60, 8, 'hidden'
             );
         }
 
