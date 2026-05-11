@@ -25,7 +25,7 @@ class TeacherResultController {
         $sql .= " ORDER BY ta.finished_at DESC, ta.id DESC";
         $st = db()->prepare($sql);
         $st->execute($params);
-        view('teacher/results/index', ['title' => 'Sonuçlar', 'me' => $me, 'items' => $st->fetchAll(), 'isAdmin' => $isAdmin]);
+        view('teacher/results/index', ['title' => 'Raporlar', 'me' => $me, 'items' => $st->fetchAll(), 'isAdmin' => $isAdmin]);
     }
 
     public static function show(string $id): void {

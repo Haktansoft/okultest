@@ -1,4 +1,4 @@
-<?php use function App\{e, csrfToken, mediaUrl}; ?>
+<?php use function App\{e, csrfToken, mediaUrl, formatRichText}; ?>
 <div class="test-runner test-runner-student">
   <main class="test-main">
     <div class="test-topbar">
@@ -66,6 +66,7 @@ foreach ($questions as $q) {
         'category_id' => (int)$q['category_id'],
         'category' => $q['category_name'] ?? 'Diğer',
         'category_description' => $q['category_description'] ?? null,
+        'category_description_html' => formatRichText($q['category_description'] ?? null),
         'category_audio' => $q['category_audio'] ? [
             'kind' => 'audio',
             'url' => '/media/' . (int)$q['category_audio']['id'],
@@ -76,6 +77,11 @@ foreach ($questions as $q) {
             'kind' => $q['prompt_media']['kind'],
             'url' => '/media/' . (int)$q['prompt_media']['id'],
             'name' => $q['prompt_media']['original_name'],
+        ] : null,
+        'prompt_audio' => !empty($q['prompt_audio']) ? [
+            'kind' => 'audio',
+            'url' => '/media/' . (int)$q['prompt_audio']['id'],
+            'name' => $q['prompt_audio']['original_name'],
         ] : null,
         'options' => array_map(fn($o) => [
             'id' => (int)$o['id'],

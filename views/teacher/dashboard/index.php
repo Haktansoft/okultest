@@ -10,10 +10,10 @@ $isAdmin = ($me['role'] ?? '') === 'admin';
 
 <div class="row g-3">
   <?php foreach ([
-    ['Öğrenciler',       $stats['students'],       'bi-people',          '/teacher/students'],
-    ['Atamalar',         $stats['assignments'],    'bi-send',            '/teacher/assignments'],
-    ['Tamamlanan',       $stats['completed'],      'bi-check2-circle',   '/teacher/results'],
-    ['Fiziksel Bekleyen',$stats['needs_physical'], 'bi-pencil-square',   '/teacher/physical'],
+    ['Öğrenciler',           $stats['students'],       'bi-people',          '/teacher/students'],
+    ['Testler',              $stats['assignments'],    'bi-send',            '/teacher/assignments'],
+    ['Tamamlanan',           $stats['completed'],      'bi-check2-circle',   '/teacher/results'],
+    ['Kağıt-Kalem Bekleyen', $stats['needs_physical'], 'bi-pencil-square',   '/teacher/physical'],
   ] as [$lbl, $cnt, $ic, $href]): ?>
     <div class="col-6 col-md-3">
       <a class="stat-tile" href="<?= e($href) ?>">

@@ -20,23 +20,29 @@ foreach ($items as $i) {
   <div class="row g-3 mb-4">
     <?php foreach (array_merge($progress, $pending) as $a): ?>
       <div class="col-md-6">
-        <a href="/student/tests/<?= (int)$a['id'] ?>/intro" class="card h-100 text-decoration-none text-dark">
-          <div class="card-body d-flex justify-content-between align-items-start">
-            <div>
-              <div class="fw-semibold mb-1"><?= e($a['test_title']) ?></div>
-              <div class="muted tiny">
-                <?= (int)$a['visible_q'] ?> soru
-                <?php if ($a['time_limit_minutes']): ?> · <?= (int)$a['time_limit_minutes'] ?> dk<?php endif; ?>
-                <?php if ((int)$a['phys_q'] > 0): ?>
-                  · <span style="color:#92400e">+<?= (int)$a['phys_q'] ?> fiziksel (öğretmenle)</span>
-                <?php endif; ?>
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <div class="fw-semibold mb-1"><?= e($a['test_title']) ?></div>
+                <div class="muted tiny">
+                  <?= (int)$a['visible_q'] ?> soru
+                  <?php if ($a['time_limit_minutes']): ?> · <?= (int)$a['time_limit_minutes'] ?> dk<?php endif; ?>
+                  <?php if ((int)$a['phys_q'] > 0): ?>
+                    · <span style="color:#92400e">+<?= (int)$a['phys_q'] ?> fiziksel (öğretmenle)</span>
+                  <?php endif; ?>
+                </div>
               </div>
+              <span class="badge text-bg-<?= $a['status'] === 'in_progress' ? 'info' : 'secondary' ?>">
+                <?= $a['status'] === 'in_progress' ? 'Devam ediyor' : 'Başlamadı' ?>
+              </span>
             </div>
-            <span class="badge text-bg-<?= $a['status'] === 'in_progress' ? 'info' : 'secondary' ?>">
-              <?= $a['status'] === 'in_progress' ? 'Devam ediyor' : 'Başlamadı' ?>
-            </span>
+            <a href="/student/tests/<?= (int)$a['id'] ?>/intro" class="btn btn-primary w-100">
+              <i class="bi bi-play-fill"></i>
+              <?= $a['status'] === 'in_progress' ? 'Devam Et' : 'Teste Başla' ?>
+            </a>
           </div>
-        </a>
+        </div>
       </div>
     <?php endforeach; ?>
   </div>

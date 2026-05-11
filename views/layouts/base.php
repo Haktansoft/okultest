@@ -19,13 +19,11 @@ if ($role === 'admin') {
             ['/admin/questions',       'Sorular',      'bi-question-circle'],
             ['/admin/tests',           'Testler',      'bi-card-checklist'],
         ],
-        'Sınıf' => [
-            ['/teacher/students',      'Öğrenciler',     'bi-people'],
-            ['/teacher/assignments',   'Atamalar',       'bi-send'],
-        ],
-        'Sonuçlar' => [
-            ['/teacher/results',       'Sonuçlar',       'bi-clipboard-data'],
-            ['/teacher/physical',      'Fiziksel Sorular','bi-pencil-square'],
+        '' => [
+            ['/teacher/students',      'Öğrenciler',           'bi-people'],
+            ['/teacher/assignments',   'Testler',              'bi-send'],
+            ['/teacher/results',       'Raporlar',             'bi-clipboard-data'],
+            ['/teacher/physical',      'Kağıt - Kalem Soruları','bi-pencil-square'],
         ],
         'Kullanıcılar' => [
             ['/admin/teachers',        'Öğretmenler',    'bi-person-badge'],
@@ -33,16 +31,12 @@ if ($role === 'admin') {
     ];
 } elseif ($role === 'teacher') {
     $navGroups = [
-        'Genel' => [
-            ['/teacher',               'Özet',           'bi-speedometer2'],
-        ],
-        'Sınıf' => [
-            ['/teacher/students',      'Öğrenciler',     'bi-people'],
-            ['/teacher/assignments',   'Atamalar',       'bi-send'],
-        ],
-        'Sonuçlar' => [
-            ['/teacher/results',       'Sonuçlar',       'bi-clipboard-data'],
-            ['/teacher/physical',      'Fiziksel Sorular','bi-pencil-square'],
+        '' => [
+            ['/teacher',               'Özet',                  'bi-speedometer2'],
+            ['/teacher/students',      'Öğrenciler',            'bi-people'],
+            ['/teacher/assignments',   'Testler',               'bi-send'],
+            ['/teacher/results',       'Raporlar',              'bi-clipboard-data'],
+            ['/teacher/physical',      'Kağıt - Kalem Soruları','bi-pencil-square'],
         ],
     ];
 } elseif ($role === 'student') {

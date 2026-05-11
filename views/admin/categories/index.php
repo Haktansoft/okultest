@@ -18,7 +18,15 @@
       <?php else: foreach ($items as $i): ?>
         <tr>
           <td class="fw-semibold"><?= e($i['name']) ?></td>
-          <td class="muted"><?= e($i['description']) ?></td>
+          <td class="muted"><?php
+            $d = trim((string)($i['description'] ?? ''));
+            if ($d === '') {
+                echo '';
+            } else {
+                $first = explode("\n", $d)[0];
+                echo e(mb_substr($first, 0, 120, 'UTF-8')) . (mb_strlen($d, 'UTF-8') > 120 ? '…' : '');
+            }
+          ?></td>
           <td class="text-end"><?= e((string)$i['qcount']) ?></td>
           <td class="text-end">
             <a href="/admin/categories/<?= (int)$i['id'] ?>/edit" class="btn btn-sm btn-outline-secondary">Düzenle</a>

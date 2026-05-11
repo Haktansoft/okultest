@@ -16,7 +16,8 @@
     </div>
     <div class="mb-3">
       <label class="form-label">Açıklama / Yönerge <span class="muted tiny">(opsiyonel)</span></label>
-      <textarea class="form-control" name="description" rows="3" placeholder="Bu kategori öncesinde öğrenciye gösterilecek açıklama metni…"><?= e($item['description'] ?? '') ?></textarea>
+      <textarea class="form-control" name="description" rows="5" placeholder="Birden fazla paragraf için boş satır bırakın.&#10;Madde için satır başına - veya * koyun.&#10;&#10;Örnek:&#10;Bu bölümde dinleme soruları var.&#10;&#10;- Soruyu dikkatlice dinle&#10;- Her soruda doğru cevabı işaretle&#10;- Emin değilsen boş bırakabilirsin"><?= e($item['description'] ?? '') ?></textarea>
+      <div class="form-help mt-1">Boş satır = yeni paragraf · <code>-</code> veya <code>*</code> ile başlayan satırlar maddelenir.</div>
     </div>
     <div class="mb-1">
       <label class="form-label">Yönerge sesi <span class="muted tiny">(opsiyonel — sadece ses dosyası)</span></label>

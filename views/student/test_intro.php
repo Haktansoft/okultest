@@ -13,7 +13,7 @@
       <?php endif; ?>
       <?php if ($physQ > 0): ?>
         <li class="text-warning"><i class="bi bi-info-circle me-2"></i>
-          Bu testte <strong><?= (int)$physQ ?> fiziksel soru</strong> var; onları öğretmeninle birlikte yapacaksın (testte sana gösterilmez).
+          Bu testte <strong><?= (int)$physQ ?> kağıt-kalem soru</strong> var; onları öğretmeninle birlikte yapacaksın.
         </li>
       <?php endif; ?>
     </ul>
@@ -23,7 +23,7 @@
       <input type="hidden" name="mode" value="per_question">
       <button class="btn btn-primary btn-lg w-100">
         <i class="bi bi-play-fill"></i>
-        <?= $assignment['status'] === 'in_progress' ? 'Devam Et' : 'Testi Başlat' ?>
+        <?= $assignment['status'] === 'in_progress' ? 'Devam Et' : 'Teste Başla' ?>
       </button>
     </form>
   </div>

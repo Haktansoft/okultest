@@ -164,7 +164,9 @@
     if (!q) return false;
     if (introSeen.has(q.category_id)) return false;
     if (firstIndexByCategory[q.category_id] !== currentIndex) return false;
-    const hasIntroContent = (q.category_description && q.category_description.trim().length > 0) || q.category_audio;
+    const introHtml = (q.category_description_html || '').trim();
+    const introText = (q.category_description || '').trim();
+    const hasIntroContent = introHtml.length > 0 || introText.length > 0 || q.category_audio;
     if (!hasIntroContent) {
       introSeen.add(q.category_id);
       return false;
@@ -189,10 +191,17 @@
     title.textContent = q.category || 'Bölüm';
     card.appendChild(title);
 
-    if (q.category_description && q.category_description.trim().length > 0) {
+    const descHtml = (q.category_description_html || '').trim();
+    const descText = (q.category_description || '').trim();
+    if (descHtml.length > 0) {
+      const desc = document.createElement('div');
+      desc.className = 'ci-desc ci-desc-rich';
+      desc.innerHTML = descHtml;
+      card.appendChild(desc);
+    } else if (descText.length > 0) {
       const desc = document.createElement('div');
       desc.className = 'ci-desc';
-      desc.textContent = q.category_description.trim();
+      desc.textContent = descText;
       card.appendChild(desc);
     }
 
@@ -213,7 +222,7 @@
     const startBtn = document.createElement('button');
     startBtn.type = 'button';
     startBtn.className = 'ci-start';
-    startBtn.innerHTML = '<i class="bi bi-play-fill"></i> Başla';
+    startBtn.innerHTML = '<i class="bi bi-play-fill"></i> Teste Başla';
     startBtn.addEventListener('click', () => {
       introSeen.add(q.category_id);
       currentScene = null;
@@ -252,6 +261,9 @@
 
     if (q.prompt_media) {
       card.appendChild(renderMedia(q.prompt_media, 'prompt-media mt-3'));
+    }
+    if (q.prompt_audio) {
+      card.appendChild(renderMedia(q.prompt_audio, 'prompt-media prompt-audio mt-3'));
     }
 
     const opts = document.createElement('div');
@@ -396,8 +408,6 @@
     const isLast = currentIndex === D.questions.length - 1;
     advanceTimer = setTimeout(() => {
       if (isLast) {
-        // Öğretmen son soruda otomatik bitirmesin — kaydet butonuna kendi bassın
-        if (isTeacher) return;
         const allMarked = D.questions.every(qq => marked[qq.id]);
         if (allMarked) finishTest(true);
       } else {

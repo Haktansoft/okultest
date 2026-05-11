@@ -1,8 +1,8 @@
 <?php use function App\e; $isAdmin = !empty($isAdmin) || (($me['role'] ?? '') === 'admin'); ?>
 <div class="page-header">
   <div>
-    <h1 class="page-title">Sonuçlar</h1>
-    <div class="page-sub">Tamamlanmış / fiziksel bekleyen test sonuçları.</div>
+    <h1 class="page-title">Raporlar</h1>
+    <div class="page-sub">Tamamlanmış / kağıt-kalem bekleyen test raporları.</div>
   </div>
 </div>
 
@@ -39,8 +39,8 @@
               <i class="bi bi-file-earmark-pdf"></i> Sonuç PDF
             </a>
             <?php if ($i['status'] === 'needs_physical'): ?>
-              <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>" title="Fiziksel soruları gir">
-                <i class="bi bi-pencil-square"></i> Fiziksel gir
+              <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>" title="Kağıt-kalem sorularını gir">
+                <i class="bi bi-pencil-square"></i> Kağıt-Kalem gir
               </a>
             <?php endif; ?>
             <?php if ($isAdmin): ?>

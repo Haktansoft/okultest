@@ -4,6 +4,8 @@
   const addBtn = document.getElementById('add-opt');
   const promptIdInput = document.getElementById('prompt_media_id');
   const promptSlot = document.getElementById('prompt-media-slot');
+  const promptAudioIdInput = document.getElementById('prompt_audio_id');
+  const promptAudioSlot = document.getElementById('prompt-audio-slot');
 
   // Modal
   const modalEl = document.getElementById('mediaModal');
@@ -17,8 +19,9 @@
   const confirmBtn = document.getElementById('media-confirm');
   const selectedName = document.getElementById('media-selected-name');
 
-  let pickContext = null; // 'prompt' | { row, mediaInput, slot }
+  let pickContext = null; // 'prompt' | 'prompt_audio' | { row, mediaInput, slot }
   let currentKind = 'image';
+  let lockKind = null; // when set, the modal only shows this media kind
   let pickedItem = null;
   let searchTimer = null;
 
@@ -43,6 +46,8 @@
       btn.addEventListener('click', () => {
         if (slot.dataset.context === 'prompt') {
           pickContext = 'prompt';
+        } else if (slot.dataset.context === 'prompt_audio') {
+          pickContext = 'prompt_audio';
         } else {
           const row = slot.closest('.option-row');
           pickContext = { row, mediaInput: mediaIdInput, slot };
@@ -99,6 +104,7 @@
     change.type = 'button'; change.title = 'Değiştir'; change.innerHTML = '<i class="bi bi-arrow-repeat"></i>';
     change.addEventListener('click', () => {
       if (slot.dataset.context === 'prompt') pickContext = 'prompt';
+      else if (slot.dataset.context === 'prompt_audio') pickContext = 'prompt_audio';
       else {
         const row = slot.closest('.option-row');
         pickContext = { row, mediaInput: mediaIdInput, slot };
@@ -130,6 +136,20 @@
       }
     : null;
   renderSlot(promptSlot, promptIdInput, initialPromptMedia);
+
+  // --------- Prompt audio slot (ayrı ses) ---------
+  if (promptAudioSlot && promptAudioIdInput) {
+    promptAudioSlot.dataset.context = 'prompt_audio';
+    const initialPromptAudio = promptAudioIdInput.value
+      ? {
+          id: parseInt(promptAudioIdInput.value, 10),
+          kind: 'audio',
+          name: promptAudioIdInput.dataset.name || '',
+          url: '/media/' + promptAudioIdInput.value,
+        }
+      : null;
+    renderSlot(promptAudioSlot, promptAudioIdInput, initialPromptAudio);
+  }
 
   // --------- Options ---------
   function addRow(data = {}) {
@@ -187,6 +207,7 @@
   // --------- Media picker (JSON) ---------
   tabs.forEach(t => t.addEventListener('click', e => {
     e.preventDefault();
+    if (lockKind && t.dataset.kind !== lockKind) return;
     currentKind = t.dataset.kind;
     tabs.forEach(x => x.classList.toggle('active', x === t));
     pickedItem = null;
@@ -212,8 +233,14 @@
     pickedItem = null;
     refreshConfirm();
     search.value = '';
-    currentKind = 'image';
-    tabs.forEach(t => t.classList.toggle('active', t.dataset.kind === currentKind));
+    lockKind = (pickContext === 'prompt_audio') ? 'audio' : null;
+    currentKind = lockKind || 'image';
+    tabs.forEach(t => {
+      t.classList.toggle('active', t.dataset.kind === currentKind);
+      t.classList.toggle('disabled', !!lockKind && t.dataset.kind !== lockKind);
+      t.style.pointerEvents = (lockKind && t.dataset.kind !== lockKind) ? 'none' : '';
+      t.style.opacity = (lockKind && t.dataset.kind !== lockKind) ? '0.4' : '';
+    });
     loadMedia(true);
     getModal().show();
     setTimeout(() => search.focus(), 200);
@@ -350,6 +377,12 @@
       promptIdInput.dataset.kind = item.kind;
       promptIdInput.dataset.name = item.name;
       renderSlot(promptSlot, promptIdInput, item);
+    } else if (pickContext === 'prompt_audio') {
+      if (item.kind !== 'audio') return;
+      promptAudioIdInput.value = item.id;
+      promptAudioIdInput.dataset.kind = 'audio';
+      promptAudioIdInput.dataset.name = item.name;
+      renderSlot(promptAudioSlot, promptAudioIdInput, item);
     } else if (pickContext && pickContext.mediaInput) {
       pickContext.mediaInput.value = item.id;
       pickContext.mediaInput.dataset.kind = item.kind;

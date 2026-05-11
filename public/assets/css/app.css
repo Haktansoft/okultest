@@ -463,6 +463,26 @@ textarea.form-control { line-height: 1.5; }
   color: var(--c-text); max-width: 640px; margin: 0 auto;
   white-space: pre-line;
 }
+.category-intro .ci-desc-rich {
+  text-align: left;
+  white-space: normal;
+}
+.category-intro .ci-desc-rich p {
+  margin: 0 0 0.85em;
+}
+.category-intro .ci-desc-rich p:last-child {
+  margin-bottom: 0;
+}
+.category-intro .ci-desc-rich ul {
+  margin: 0 0 0.85em;
+  padding-left: 1.4em;
+}
+.category-intro .ci-desc-rich ul:last-child {
+  margin-bottom: 0;
+}
+.category-intro .ci-desc-rich li {
+  margin: 0.2em 0;
+}
 .category-intro .ci-audio {
   margin-top: 22px; padding: 14px 18px;
   background: #fff; border: 1px solid #e9d5ff; border-radius: 14px;

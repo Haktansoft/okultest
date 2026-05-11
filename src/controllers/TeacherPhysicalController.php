@@ -27,7 +27,7 @@ class TeacherPhysicalController {
         $sql .= " ORDER BY ta.finished_at DESC";
         $st = db()->prepare($sql);
         $st->execute($params);
-        view('teacher/physical/index', ['title' => 'Fiziksel Sorular', 'me' => $me, 'items' => $st->fetchAll()]);
+        view('teacher/physical/index', ['title' => 'Kağıt - Kalem Soruları', 'me' => $me, 'items' => $st->fetchAll()]);
     }
 
     public static function show(string $id): void {
@@ -35,7 +35,7 @@ class TeacherPhysicalController {
         $data = self::loadFor((int)$id, null);
         if (!$data) { flash('err', 'Bulunamadı.'); redirect('/teacher/physical'); }
         if (!self::canAccess($me, $data)) { flash('err', 'Yetki yok.'); redirect('/teacher/physical'); }
-        $data['title'] = 'Fiziksel — ' . $data['assignment']['student_name'];
+        $data['title'] = 'Kağıt-Kalem — ' . $data['assignment']['student_name'];
         $data['me'] = $me;
         view('teacher/physical/show', $data);
     }
@@ -83,8 +83,34 @@ class TeacherPhysicalController {
             flash('err', 'Kaydedilemedi: ' . $ex->getMessage());
             redirect("/teacher/physical/$id");
         }
-        flash('ok', 'Fiziksel yanıtlar kaydedildi.');
-        redirect("/teacher/results/$id");
+        flash('ok', 'Yanıtlar kaydedildi.');
+        redirect("/teacher/physical/$id/saved");
+    }
+
+    public static function saved(string $id): void {
+        $me = requireRole('teacher', 'admin');
+        $pdo = db();
+        $st = $pdo->prepare("
+            SELECT ta.*, t.title AS test_title, u.full_name AS student_name, u.campus_id AS student_campus_id
+            FROM test_assignments ta
+            JOIN tests t ON t.id=ta.test_id
+            JOIN users u ON u.id=ta.student_id
+            WHERE ta.id=?
+        ");
+        $st->execute([$id]);
+        $a = $st->fetch();
+        if (!$a) { flash('err', 'Bulunamadı.'); redirect('/teacher/physical'); }
+        if ($me['role'] !== 'admin') {
+            $myCampus = (int)($me['campus_id'] ?? 0);
+            if ($myCampus <= 0 || $myCampus !== (int)$a['student_campus_id']) {
+                flash('err', 'Yetki yok.'); redirect('/teacher/physical');
+            }
+        }
+        view('teacher/physical/saved', [
+            'title' => 'Kaydedildi',
+            'me' => $me,
+            'assignment' => $a,
+        ]);
     }
 
     private static function canAccess(array $me, array $data): bool {
@@ -148,6 +174,7 @@ class TeacherPhysicalController {
             }
             foreach ($questions as $q) {
                 if (!empty($q['prompt_media_id'])) $mediaIds[(int)$q['prompt_media_id']] = true;
+                if (!empty($q['prompt_audio_id'])) $mediaIds[(int)$q['prompt_audio_id']] = true;
             }
         }
         $mediaById = [];
@@ -163,6 +190,7 @@ class TeacherPhysicalController {
             $q['options']      = $optionsByQ[(int)$q['id']] ?? [];
             $q['existing']     = $paByQ[(int)$q['id']] ?? null;
             $q['prompt_media'] = !empty($q['prompt_media_id']) ? ($mediaById[(int)$q['prompt_media_id']] ?? null) : null;
+            $q['prompt_audio'] = !empty($q['prompt_audio_id']) ? ($mediaById[(int)$q['prompt_audio_id']] ?? null) : null;
             foreach ($q['options'] as &$o) {
                 $o['media'] = !empty($o['media_id']) ? ($mediaById[(int)$o['media_id']] ?? null) : null;
             }

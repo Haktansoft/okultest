@@ -64,6 +64,7 @@ class AdminQuestionController {
             'item' => $old['item'] ?? null,
             'options' => $old['options'] ?? null,
             'promptMedia' => $old['promptMedia'] ?? null,
+            'promptAudio' => $old['promptAudio'] ?? null,
         ]);
     }
 
@@ -74,8 +75,8 @@ class AdminQuestionController {
         $pdo = db();
         $pdo->beginTransaction();
         try {
-            $st = $pdo->prepare("INSERT INTO questions (category_id, prompt, prompt_media_id, is_physical, created_by) VALUES (?, ?, ?, ?, ?)");
-            $st->execute([$payload['category_id'], $payload['prompt'], $payload['prompt_media_id'], $payload['is_physical'], $me['id']]);
+            $st = $pdo->prepare("INSERT INTO questions (category_id, prompt, prompt_media_id, prompt_audio_id, is_physical, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+            $st->execute([$payload['category_id'], $payload['prompt'], $payload['prompt_media_id'], $payload['prompt_audio_id'], $payload['is_physical'], $me['id']]);
             $qid = (int)$pdo->lastInsertId();
             self::saveOptions($qid, $payload['options']);
             $pdo->commit();
@@ -110,7 +111,13 @@ class AdminQuestionController {
             $pms->execute([$item['prompt_media_id']]);
             $pm = $pms->fetch() ?: null;
         }
-        view('admin/questions/form', ['title' => 'Soru Düzenle', 'me' => $me, 'cats' => $cats, 'item' => $item, 'options' => $options, 'promptMedia' => $pm]);
+        $pa = null;
+        if (!empty($item['prompt_audio_id'])) {
+            $pas = db()->prepare("SELECT * FROM media WHERE id=? AND kind='audio'");
+            $pas->execute([$item['prompt_audio_id']]);
+            $pa = $pas->fetch() ?: null;
+        }
+        view('admin/questions/form', ['title' => 'Soru Düzenle', 'me' => $me, 'cats' => $cats, 'item' => $item, 'options' => $options, 'promptMedia' => $pm, 'promptAudio' => $pa]);
     }
 
     public static function update(string $id): void {
@@ -120,8 +127,8 @@ class AdminQuestionController {
         $pdo = db();
         $pdo->beginTransaction();
         try {
-            $st = $pdo->prepare("UPDATE questions SET category_id=?, prompt=?, prompt_media_id=?, is_physical=? WHERE id=?");
-            $st->execute([$payload['category_id'], $payload['prompt'], $payload['prompt_media_id'], $payload['is_physical'], $id]);
+            $st = $pdo->prepare("UPDATE questions SET category_id=?, prompt=?, prompt_media_id=?, prompt_audio_id=?, is_physical=? WHERE id=?");
+            $st->execute([$payload['category_id'], $payload['prompt'], $payload['prompt_media_id'], $payload['prompt_audio_id'], $payload['is_physical'], $id]);
             $pdo->prepare("DELETE FROM question_options WHERE question_id=?")->execute([$id]);
             self::saveOptions((int)$id, $payload['options']);
             $pdo->commit();
@@ -151,6 +158,12 @@ class AdminQuestionController {
         $prompt = trim((string)($_POST['prompt'] ?? ''));
         $isPhys = !empty($_POST['is_physical']) ? 1 : 0;
         $promptMediaId = !empty($_POST['prompt_media_id']) ? (int)$_POST['prompt_media_id'] : null;
+        $promptAudioId = !empty($_POST['prompt_audio_id']) ? (int)$_POST['prompt_audio_id'] : null;
+        if ($promptAudioId) {
+            $check = db()->prepare("SELECT id FROM media WHERE id=? AND kind='audio'");
+            $check->execute([$promptAudioId]);
+            if (!$check->fetchColumn()) $promptAudioId = null;
+        }
 
         if ($cat <= 0) return [null, 'Kategori seçilmeli.'];
         if ($prompt === '') return [null, 'Soru metni boş olamaz.'];
@@ -187,6 +200,7 @@ class AdminQuestionController {
             'category_id' => $cat,
             'prompt' => $prompt,
             'prompt_media_id' => $promptMediaId,
+            'prompt_audio_id' => $promptAudioId,
             'is_physical' => $isPhys,
             'options' => $opts,
         ], null];
@@ -215,6 +229,7 @@ class AdminQuestionController {
                 'prompt'          => (string)($_POST['prompt'] ?? ''),
                 'is_physical'     => !empty($_POST['is_physical']) ? 1 : 0,
                 'prompt_media_id' => !empty($_POST['prompt_media_id']) ? (int)$_POST['prompt_media_id'] : null,
+                'prompt_audio_id' => !empty($_POST['prompt_audio_id']) ? (int)$_POST['prompt_audio_id'] : null,
             ],
             'options' => $opts,
         ];
@@ -234,6 +249,13 @@ class AdminQuestionController {
             $promptMedia = $st->fetch() ?: null;
         }
         $old['promptMedia'] = $promptMedia;
+        $promptAudio = null;
+        if (!empty($old['item']['prompt_audio_id'])) {
+            $st = db()->prepare("SELECT * FROM media WHERE id=? AND kind='audio'");
+            $st->execute([$old['item']['prompt_audio_id']]);
+            $promptAudio = $st->fetch() ?: null;
+        }
+        $old['promptAudio'] = $promptAudio;
         return $old;
     }
 

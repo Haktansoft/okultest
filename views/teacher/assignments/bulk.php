@@ -7,7 +7,7 @@
       Öğrencinin yerine yanıtları sen gir; fiziksel soruları da bu ekrandan çözebilirsin.
     </div>
   </div>
-  <a href="/teacher/assignments" class="btn btn-link"><i class="bi bi-arrow-left"></i> Atamalara dön</a>
+  <a href="/teacher/assignments" class="btn btn-link"><i class="bi bi-arrow-left"></i> Testlere dön</a>
 </div>
 
 <?php if (!$questions): ?>

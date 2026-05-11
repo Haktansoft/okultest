@@ -49,12 +49,21 @@ $opts = $options ?: [
     </div>
 
     <div class="mt-3">
-      <label class="form-label">Sorunun medyası <span class="muted tiny">(opsiyonel — görsel/ses/video)</span></label>
+      <label class="form-label">Sorunun görseli/videosu <span class="muted tiny">(opsiyonel)</span></label>
       <input type="hidden" name="prompt_media_id" id="prompt_media_id"
              data-kind="<?= e($promptMedia['kind'] ?? '') ?>"
              data-name="<?= e($promptMedia['original_name'] ?? '') ?>"
              value="<?= e($item['prompt_media_id'] ?? '') ?>">
       <div id="prompt-media-slot" class="media-slot"></div>
+    </div>
+
+    <div class="mt-3">
+      <label class="form-label">Sorunun ses dosyası <span class="muted tiny">(opsiyonel — görselin yanı sıra çalınır)</span></label>
+      <input type="hidden" name="prompt_audio_id" id="prompt_audio_id"
+             data-kind="audio"
+             data-name="<?= e($promptAudio['original_name'] ?? '') ?>"
+             value="<?= e($item['prompt_audio_id'] ?? '') ?>">
+      <div id="prompt-audio-slot" class="media-slot"></div>
     </div>
   </div></div>
 

@@ -76,7 +76,7 @@ class TeacherAssignmentController {
         $tests = db()->query("SELECT id, title FROM tests ORDER BY title")->fetchAll();
 
         view('teacher/assignments/index', [
-            'title' => 'Atamalar', 'me' => $me, 'items' => $items,
+            'title' => 'Testler', 'me' => $me, 'items' => $items,
             'filters' => $f,
             'institutions' => $institutions, 'campuses' => $campuses, 'tests' => $tests,
             'gradeLevels' => TeacherStudentController::GRADE_LEVELS,

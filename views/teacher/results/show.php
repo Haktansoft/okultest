@@ -12,7 +12,7 @@ $a = $assignment;
     <a class="btn btn-sm btn-outline-secondary" target="_blank" href="/teacher/results/<?= (int)$a['id'] ?>/pdf"><i class="bi bi-file-earmark-text"></i> Detaylı Sonuç PDF</a>
     <a class="btn btn-sm btn-outline-secondary" target="_blank" href="/teacher/incomplete-pdf/<?= (int)$a['id'] ?>"><i class="bi bi-file-earmark-pdf"></i> Eksikler PDF</a>
     <?php if ($a['status'] === 'needs_physical'): ?>
-      <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$a['id'] ?>"><i class="bi bi-pencil-square"></i> Fiziksel doldur</a>
+      <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$a['id'] ?>"><i class="bi bi-pencil-square"></i> Kağıt-Kalem doldur</a>
     <?php endif; ?>
   </div>
 </div>
@@ -33,7 +33,7 @@ $a = $assignment;
       <div class="d-flex justify-content-between align-items-start">
         <div>
           <span class="muted tiny">#<?= $idx + 1 ?> · <?= e($q['category_name']) ?></span>
-          <?php if ($isPhys): ?><span class="badge text-bg-warning ms-1">Fiziksel</span><?php endif; ?>
+          <?php if ($isPhys): ?><span class="badge text-bg-warning ms-1">Kağıt-Kalem</span><?php endif; ?>
         </div>
         <div class="muted tiny">
           <?php if (!$isPhys && $q['answer']): ?>Süre: <?= e(formatDuration((int)$q['answer']['time_spent_seconds'])) ?><?php endif; ?>
@@ -53,7 +53,7 @@ $a = $assignment;
       </ul>
       <?php if (!$ans): ?>
         <div class="text-danger tiny mt-2"><i class="bi bi-exclamation-triangle"></i>
-          <?= $isPhys ? 'Fiziksel yanıt henüz girilmedi.' : 'Cevaplanmadı.' ?>
+          <?= $isPhys ? 'Kağıt-kalem yanıtı henüz girilmedi.' : 'Cevaplanmadı.' ?>
         </div>
       <?php else: ?>
         <div class="muted tiny mt-2">Kazanılan: <strong><?= e($ans['option_score'] ?? '0') ?></strong></div>

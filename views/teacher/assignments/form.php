@@ -1,7 +1,7 @@
 <?php use function App\{e, csrfField}; ?>
 <div class="page-header">
   <div>
-    <h1 class="page-title">Yeni Atama</h1>
+    <h1 class="page-title">Yeni Test Ata</h1>
     <div class="page-sub">Bir testi birden fazla öğrenciye aynı anda atayabilirsin.</div>
   </div>
   <a href="/teacher/assignments" class="btn btn-link"><i class="bi bi-arrow-left"></i> Listeye dön</a>

@@ -284,6 +284,7 @@ class StudentTestController {
             }
             foreach ($questions as $q) {
                 if (!empty($q['prompt_media_id'])) $mediaIds[(int)$q['prompt_media_id']] = true;
+                if (!empty($q['prompt_audio_id'])) $mediaIds[(int)$q['prompt_audio_id']] = true;
                 if (!empty($q['category_audio_id'])) $mediaIds[(int)$q['category_audio_id']] = true;
             }
         }
@@ -298,6 +299,7 @@ class StudentTestController {
         foreach ($questions as &$q) {
             $q['options'] = $optionsByQ[(int)$q['id']] ?? [];
             $q['prompt_media'] = !empty($q['prompt_media_id']) ? ($mediaById[(int)$q['prompt_media_id']] ?? null) : null;
+            $q['prompt_audio'] = !empty($q['prompt_audio_id']) ? ($mediaById[(int)$q['prompt_audio_id']] ?? null) : null;
             $q['category_audio'] = !empty($q['category_audio_id']) ? ($mediaById[(int)$q['category_audio_id']] ?? null) : null;
             foreach ($q['options'] as &$o) {
                 $o['media'] = !empty($o['media_id']) ? ($mediaById[(int)$o['media_id']] ?? null) : null;

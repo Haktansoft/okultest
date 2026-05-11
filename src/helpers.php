@@ -73,6 +73,48 @@ function mediaUrl(?array $media): ?string {
     return '/media/' . (int)$media['id'];
 }
 
+// Düz yazıyı paragraf + maddeler halinde HTML'e dönüştür.
+// Boş satır → yeni paragraf. "- " veya "* " ile başlayan satırlar liste maddesi.
+function formatRichText(?string $text): string {
+    $text = trim((string)$text);
+    if ($text === '') return '';
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    $blocks = preg_split('/\n{2,}/', $text);
+    $html = '';
+    foreach ($blocks as $block) {
+        $lines = explode("\n", $block);
+        $listItems = [];
+        $paragraphLines = [];
+        $flushList = function () use (&$listItems, &$html) {
+            if (!$listItems) return;
+            $html .= '<ul>';
+            foreach ($listItems as $li) {
+                $html .= '<li>' . nl2br(e($li)) . '</li>';
+            }
+            $html .= '</ul>';
+            $listItems = [];
+        };
+        $flushParagraph = function () use (&$paragraphLines, &$html) {
+            if (!$paragraphLines) return;
+            $html .= '<p>' . nl2br(e(implode("\n", $paragraphLines))) . '</p>';
+            $paragraphLines = [];
+        };
+        foreach ($lines as $line) {
+            $trimmed = ltrim($line);
+            if (preg_match('/^[-*•]\s+(.*)$/u', $trimmed, $m)) {
+                $flushParagraph();
+                $listItems[] = $m[1];
+            } else {
+                $flushList();
+                if ($trimmed !== '') $paragraphLines[] = $trimmed;
+            }
+        }
+        $flushList();
+        $flushParagraph();
+    }
+    return $html;
+}
+
 // Saniye → "Xdk Ysn" gibi format
 function formatDuration(int $seconds): string {
     if ($seconds < 60) return $seconds . ' sn';

@@ -103,13 +103,15 @@ CREATE TABLE questions (
   category_id BIGINT UNSIGNED NOT NULL,
   prompt TEXT NOT NULL,
   prompt_media_id BIGINT UNSIGNED NULL,
+  prompt_audio_id BIGINT UNSIGNED NULL,
   is_physical TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_questions_category (category_id),
   CONSTRAINT fk_questions_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
-  CONSTRAINT fk_questions_pmedia FOREIGN KEY (prompt_media_id) REFERENCES media(id) ON DELETE SET NULL
+  CONSTRAINT fk_questions_pmedia FOREIGN KEY (prompt_media_id) REFERENCES media(id) ON DELETE SET NULL,
+  CONSTRAINT fk_questions_paudio FOREIGN KEY (prompt_audio_id) REFERENCES media(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE question_options (

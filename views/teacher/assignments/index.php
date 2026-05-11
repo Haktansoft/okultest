@@ -2,7 +2,7 @@
 $statusBadge = [
   'pending'        => '<span class="badge text-bg-secondary">Bekliyor</span>',
   'in_progress'    => '<span class="badge text-bg-info">Devam ediyor</span>',
-  'needs_physical' => '<span class="badge text-bg-warning">Fiziksel bekliyor</span>',
+  'needs_physical' => '<span class="badge text-bg-warning">Kağıt-Kalem bekliyor</span>',
   'completed'      => '<span class="badge text-bg-success">Tamamlandı</span>',
 ];
 $isAdmin = ($me['role'] ?? '') === 'admin';
@@ -10,10 +10,10 @@ $f = $filters ?? [];
 ?>
 <div class="page-header">
   <div>
-    <h1 class="page-title">Atamalar</h1>
+    <h1 class="page-title">Testler</h1>
     <div class="page-sub">Hangi öğrenciye hangi test verildi. Bekleyen testler için "Toplu gir" ile yanıtları sen de girebilirsin.</div>
   </div>
-  <a href="/teacher/assignments/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Atama</a>
+  <a href="/teacher/assignments/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Test Ata</a>
 </div>
 
 <form class="card mb-3" method="get">
@@ -64,7 +64,7 @@ $f = $filters ?? [];
         <option value="">Tüm durumlar</option>
         <option value="pending"        <?= ($f['status'] ?? '') === 'pending'        ? 'selected' : '' ?>>Bekliyor</option>
         <option value="in_progress"    <?= ($f['status'] ?? '') === 'in_progress'    ? 'selected' : '' ?>>Devam ediyor</option>
-        <option value="needs_physical" <?= ($f['status'] ?? '') === 'needs_physical' ? 'selected' : '' ?>>Fiziksel bekliyor</option>
+        <option value="needs_physical" <?= ($f['status'] ?? '') === 'needs_physical' ? 'selected' : '' ?>>Kağıt-Kalem bekliyor</option>
         <option value="completed"      <?= ($f['status'] ?? '') === 'completed'      ? 'selected' : '' ?>>Tamamlandı</option>
       </select>
 
@@ -139,7 +139,7 @@ $f = $filters ?? [];
               <a class="btn btn-sm btn-outline-primary" href="/teacher/results/<?= (int)$i['id'] ?>">Sonuç</a>
             <?php endif; ?>
             <?php if ($i['status'] === 'needs_physical'): ?>
-              <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>">Fiziksel</a>
+              <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>">Kağıt-Kalem</a>
             <?php endif; ?>
             <?php if (in_array($i['status'], ['in_progress','completed','needs_physical'], true)): ?>
               <form class="d-inline" method="post" action="/teacher/assignments/<?= (int)$i['id'] ?>/reset"

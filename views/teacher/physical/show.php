@@ -1,8 +1,8 @@
 <?php use function App\{e, csrfToken}; $a = $assignment; ?>
 <div class="page-header">
   <div>
-    <h1 class="page-title">Fiziksel Yanıtlar — <?= e($a['student_name']) ?></h1>
-    <div class="page-sub">Test: <strong><?= e($a['test_title']) ?></strong>. Öğrenci ile birlikte fiziksel soruları çöz ve işaretle.</div>
+    <h1 class="page-title">Kağıt - Kalem Yanıtları — <?= e($a['student_name']) ?></h1>
+    <div class="page-sub">Test: <strong><?= e($a['test_title']) ?></strong>. Öğrenci ile birlikte kağıt-kalem sorularını çöz ve işaretle.</div>
   </div>
   <div class="d-flex gap-2">
     <a class="btn btn-outline-secondary" target="_blank" href="/teacher/incomplete-pdf/<?= (int)$a['id'] ?>">
@@ -94,6 +94,11 @@ foreach ($questions as $q) {
             'kind' => $q['prompt_media']['kind'],
             'url' => '/media/' . (int)$q['prompt_media']['id'],
             'name' => $q['prompt_media']['original_name'],
+        ] : null,
+        'prompt_audio' => !empty($q['prompt_audio']) ? [
+            'kind' => 'audio',
+            'url' => '/media/' . (int)$q['prompt_audio']['id'],
+            'name' => $q['prompt_audio']['original_name'],
         ] : null,
         'options' => array_map(fn($o) => [
             'id' => (int)$o['id'],

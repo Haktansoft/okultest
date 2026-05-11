@@ -1,8 +1,8 @@
 <?php use function App\e; $isAdmin = ($me['role'] ?? '') === 'admin'; ?>
 <div class="page-header">
   <div>
-    <h1 class="page-title">Fiziksel Soruları Tamamla</h1>
-    <div class="page-sub">Öğrenci testi bitirdi; öğrenciyle birlikte fiziksel soruları yanıtla.</div>
+    <h1 class="page-title">Kağıt - Kalem Soruları</h1>
+    <div class="page-sub">Öğrenci testi bitirdi; öğrenciyle birlikte kağıt-kalem sorularını yanıtla.</div>
   </div>
 </div>
 

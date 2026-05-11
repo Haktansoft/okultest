@@ -166,6 +166,7 @@ $r->get ('/teacher/incomplete-pdf/{id}',     ['App\\Controllers\\TeacherResultCo
 $r->get ('/teacher/physical',                ['App\\Controllers\\TeacherPhysicalController', 'index']);
 $r->get ('/teacher/physical/{id}',           ['App\\Controllers\\TeacherPhysicalController', 'show']);
 $r->post('/teacher/physical/{id}',           ['App\\Controllers\\TeacherPhysicalController', 'save']);
+$r->get ('/teacher/physical/{id}/saved',     ['App\\Controllers\\TeacherPhysicalController', 'saved']);
 
 // === Student ===
 $r->get ('/student',                                ['App\\Controllers\\StudentDashboardController', 'index']);
