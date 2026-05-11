@@ -95,7 +95,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
 
     // Overlay stilleri (her sayfa için yeniden yazılabilir)
     $S = [
-        'val'     => 'font-family:dejavusans;font-size:11pt;color:#1a2a3a;text-align:left;',
+        'val'     => 'font-family:dejavusans;font-size:11pt;font-weight:bold;color:#1a2a3a;text-align:left;',
         'cell'    => 'font-family:dejavusans;font-size:9pt;color:#1a2a3a;text-align:center;',
         'cellsm'  => 'font-family:dejavusans;font-size:8.5pt;color:#1a2a3a;text-align:center;line-height:1.15;',
         'comment' => 'font-family:dejavusans;font-size:9.5pt;color:#374151;text-align:center;line-height:1.45;',
@@ -108,14 +108,15 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
         $mpdf->useTemplate($tpl, 0, 0, 210, 297);
 
         if ($p === 1) {
-            // Adı Soyadı + Uygulama Tarihi
+            // Adı Soyadı + Uygulama Tarihi — değer metni dotted line üzerinde otursun
+            // (auto-detect: dotted lines at y=255.8mm ve y=273.7mm; 11pt baseline offset ≈3.5mm)
             $mpdf->WriteFixedPosHTML(
                 '<div style="'.$S['val'].'">'.htmlspecialchars($data['student_name'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                115, 244, 60, 8, 'hidden'
+                115, 252.5, 60, 8, 'hidden'
             );
             $mpdf->WriteFixedPosHTML(
                 '<div style="'.$S['val'].'">'.htmlspecialchars($data['date'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
-                115, 262, 60, 8, 'hidden'
+                115, 270.5, 60, 8, 'hidden'
             );
         }
 
