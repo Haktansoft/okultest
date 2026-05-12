@@ -8,6 +8,7 @@ if ($role === 'admin') {
     $navGroups = [
         'Genel' => [
             ['/admin',                 'Özet',         'bi-speedometer2'],
+            ['/admin/stats',           'İstatistikler','bi-bar-chart'],
         ],
         'Yapı' => [
             ['/admin/institutions',    'Kurumlar',     'bi-building'],

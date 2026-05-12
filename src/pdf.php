@@ -189,7 +189,8 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
                 $rowY = 265.64; // 267.64 - 2 (text üst offset)
                 // Sütunlar (auto-detect): Başarı x=20.06 w=23.62, Sınıf x=43.68 w=33.18,
                 //                         Karşılık x=76.86 w=33.26, Tavsiyemiz x=110.12 w=79.82
-                $mpdf->WriteFixedPosHTML('<div style="'.$S['cell'].'font-weight:bold;">'.htmlspecialchars($lvl['label'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
+                $basari = isset($data['totalP']) ? '%' . (int)$data['totalP'] : ($lvl['label'] ?? '');
+                $mpdf->WriteFixedPosHTML('<div style="'.$S['cell'].'font-weight:bold;">'.htmlspecialchars($basari, ENT_QUOTES, 'UTF-8').'</div>',
                     20.06, $rowY, 23.62, 8, 'hidden');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'">'.htmlspecialchars($lvl['sinif'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
                     43.68, $rowY, 33.18, 8, 'hidden');

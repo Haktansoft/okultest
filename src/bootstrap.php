@@ -56,6 +56,8 @@ $r->get('/admin', function () {
     App\view('admin/dashboard/index', ['title' => 'Yönetim', 'me' => $u, 'stats' => $stats]);
 });
 
+$r->get ('/admin/stats',                        ['App\\Controllers\\AdminStatsController', 'index']);
+
 $r->get ('/admin/categories',                   ['App\\Controllers\\AdminCategoryController', 'index']);
 $r->get ('/admin/categories/new',               ['App\\Controllers\\AdminCategoryController', 'createForm']);
 $r->post('/admin/categories',                   ['App\\Controllers\\AdminCategoryController', 'create']);

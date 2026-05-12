@@ -32,8 +32,15 @@ function csrfCheck(): void {
         $GLOBALS['__raw_post'] = $raw;
     }
     if (!hash_equals($_SESSION['_csrf'] ?? '', (string)$token)) {
-        http_response_code(419);
-        echo "<!doctype html><meta charset=utf-8><title>419</title><h1>419 — Oturum süresi doldu (CSRF)</h1>";
-        exit;
+        if (isApiRequest()) {
+            http_response_code(419);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'csrf_expired']);
+            exit;
+        }
+        logoutUser();
+        startSession();
+        flash('login_error', 'Oturum süresi doldu, lütfen tekrar giriş yapın.');
+        redirect('/login');
     }
 }
