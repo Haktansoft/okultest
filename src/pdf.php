@@ -113,7 +113,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
             if ($logoRel) {
                 $logoAbs = UPLOAD_PATH . '/' . ltrim((string)$logoRel, '/');
                 if (is_file($logoAbs)) {
-                    $mpdf->Image($logoAbs, 22, 245, 35, 35, '', '', false, false);
+                    $mpdf->Image($logoAbs, 20, 242, 38, 38);
                 }
             }
 
