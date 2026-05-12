@@ -159,14 +159,18 @@ class TeacherResultController {
             'totalQ'         => $totalQ,
             'totalC'         => $totalC,
             'totalP'         => $totalPct,
+            'totalLevel'     => self::olgunlukLevelLabel($totalPct),
             'level'          => $overall,
             'institution_logo_path' => $data['assignment']['institution_logo_path'] ?? null,
         ], "okul-olgunluk-{$id}.pdf");
     }
 
     private static function olgunlukLevelLabel(int $pct): string {
-        $lvl = olgunlukLevelFor($pct);
-        return $lvl['sinif'] ?? '—';
+        // Sayısal Değerlendirme & Alan Bazlı Analiz tablolarındaki "Olgunluk Düzeyi" sütunu
+        if ($pct >= 90) return 'Çok İyi';
+        if ($pct >= 75) return 'İyi';
+        if ($pct >= 60) return 'Geliştirilmeli';
+        return 'Desteklenmeli';
     }
 
     private static function slug(string $s): string {

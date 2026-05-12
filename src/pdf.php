@@ -160,7 +160,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
                 ['x' => 68.56,  'w' => 28.36, 'v' => (string)($data['totalQ'] ?? '')],
                 ['x' => 96.92,  'w' => 28.44, 'v' => (string)($data['totalC'] ?? '')],
                 ['x' => 125.36, 'w' => 28.52, 'v' => (string)($data['totalP'] ?? '').'%'],
-                ['x' => 153.88, 'w' => 36.06, 'v' => (string)($data['level']['sinif'] ?? '—')],
+                ['x' => 153.88, 'w' => 36.06, 'v' => (string)($data['totalLevel'] ?? '—')],
             ];
             foreach ($totals as $t) {
                 $mpdf->WriteFixedPosHTML(
@@ -201,7 +201,8 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
                 $basari = isset($data['totalP']) ? '%' . (int)$data['totalP'] : ($lvl['label'] ?? '');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cell'].'font-weight:bold;">'.htmlspecialchars($basari, ENT_QUOTES, 'UTF-8').'</div>',
                     20.06, $rowY, 23.62, 8, 'hidden');
-                $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'">'.htmlspecialchars($lvl['sinif'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
+                $sinifLabel = (string)($data['totalLevel'] ?? ($lvl['sinif'] ?? ''));
+                $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'font-weight:bold;">'.htmlspecialchars($sinifLabel, ENT_QUOTES, 'UTF-8').'</div>',
                     43.68, $rowY, 33.18, 8, 'hidden');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'">'.htmlspecialchars($lvl['karsilik'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
                     76.86, $rowY, 33.26, 8, 'hidden');
