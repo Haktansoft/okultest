@@ -70,7 +70,8 @@ class TeacherResultController {
             }
         }
         foreach ($cats as &$c) {
-            $c['percent'] = $c['qcount'] > 0 ? (int)round(($c['correct'] / $c['qcount']) * 100) : 0;
+            $raw = $c['qcount'] > 0 ? (int)round(($c['correct'] / $c['qcount']) * 100) : 0;
+            $c['percent'] = max(30, $raw);
             $cmt = olgunlukCommentFor($c['name'], $c['percent']);
             $c['description'] = $cmt['description'];
             $c['comment']     = $cmt['comment'];
@@ -115,14 +116,15 @@ class TeacherResultController {
                 $match['name'] = $label;
                 $rows[] = $match;
             } else {
-                $rows[] = ['name' => $label, 'qcount' => 0, 'correct' => 0, 'percent' => 0, 'description' => '', 'comment' => '', 'level' => '—'];
+                $rows[] = ['name' => $label, 'qcount' => 0, 'correct' => 0, 'percent' => 30, 'description' => '', 'comment' => '', 'level' => self::olgunlukLevelLabel(30)];
             }
         }
 
         // Genel toplam
         $totalQ = array_sum(array_column($rows, 'qcount'));
         $totalC = array_sum(array_column($rows, 'correct'));
-        $totalPct = $totalQ > 0 ? (int)round(($totalC / $totalQ) * 100) : 0;
+        $totalPctRaw = $totalQ > 0 ? (int)round(($totalC / $totalQ) * 100) : 0;
+        $totalPct = max(30, $totalPctRaw);
         $overall = olgunlukLevelFor($totalPct);
 
         // Birleşik analiz (Dil/Bilişsel/Psikomotor/Dikkat-Sıralama)
@@ -140,7 +142,8 @@ class TeacherResultController {
                     if (self::slug($r['name']) === self::slug($p)) { $q += $r['qcount']; $c2 += $r['correct']; }
                 }
             }
-            $pct = $q > 0 ? (int)round(($c2 / $q) * 100) : 0;
+            $pctRaw = $q > 0 ? (int)round(($c2 / $q) * 100) : 0;
+            $pct = max(30, $pctRaw);
             $combined[] = ['label' => $label, 'q' => $q, 'c' => $c2, 'pct' => $pct, 'level' => self::olgunlukLevelLabel($pct)];
         }
 
