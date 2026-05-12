@@ -108,6 +108,15 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
         $mpdf->useTemplate($tpl, 0, 0, 210, 297);
 
         if ($p === 1) {
+            // Kurum logosu — sol alt köşedeki beyaz kutuya. 150x150 px yüklenir; 35x35mm kare alana sığdırılır.
+            $logoRel = $data['institution_logo_path'] ?? null;
+            if ($logoRel) {
+                $logoAbs = UPLOAD_PATH . '/' . ltrim((string)$logoRel, '/');
+                if (is_file($logoAbs)) {
+                    $mpdf->Image($logoAbs, 22, 245, 35, 35, '', '', false, false);
+                }
+            }
+
             // Adı Soyadı + Uygulama Tarihi — değer metni dotted line üzerinde otursun
             // (auto-detect: dotted lines at y=255.8mm ve y=273.7mm; 11pt baseline offset ≈3.5mm)
             $mpdf->WriteFixedPosHTML(

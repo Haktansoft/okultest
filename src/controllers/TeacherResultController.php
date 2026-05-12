@@ -152,14 +152,15 @@ class TeacherResultController {
         $uygDate = $uygTs ? date('d.m.Y', strtotime($uygTs)) : '';
 
         renderOlgunlukPdf([
-            'student_name' => $data['assignment']['student_name'] ?? '',
-            'date'         => $uygDate,
-            'rows'         => $rows,
-            'combined'     => $combined,
-            'totalQ'       => $totalQ,
-            'totalC'       => $totalC,
-            'totalP'       => $totalPct,
-            'level'        => $overall,
+            'student_name'   => $data['assignment']['student_name'] ?? '',
+            'date'           => $uygDate,
+            'rows'           => $rows,
+            'combined'       => $combined,
+            'totalQ'         => $totalQ,
+            'totalC'         => $totalC,
+            'totalP'         => $totalPct,
+            'level'          => $overall,
+            'institution_logo_path' => $data['assignment']['institution_logo_path'] ?? null,
         ], "okul-olgunluk-{$id}.pdf");
     }
 
