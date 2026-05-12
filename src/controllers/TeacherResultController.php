@@ -9,23 +9,75 @@ class TeacherResultController {
     public static function index(): void {
         $me = requireRole('teacher', 'admin');
         $isAdmin = $me['role'] === 'admin';
+        $pdo = db();
+
+        // Süzgeç parametreleri (sadece admin için aktif)
+        $instId = 0; $campId = 0;
+        if ($isAdmin) {
+            $instId = isset($_GET['institution_id']) && $_GET['institution_id'] !== '' ? (int)$_GET['institution_id'] : 0;
+            $campId = isset($_GET['campus_id'])      && $_GET['campus_id']      !== '' ? (int)$_GET['campus_id']      : 0;
+        }
+
+        // Süzgeç seçenekleri
+        $institutions = []; $campuses = [];
+        if ($isAdmin) {
+            $institutions = $pdo->query("SELECT id, name FROM institutions ORDER BY name")->fetchAll();
+            if ($instId > 0) {
+                $cs = $pdo->prepare("SELECT id, name FROM campuses WHERE institution_id=? ORDER BY name");
+                $cs->execute([$instId]);
+                $campuses = $cs->fetchAll();
+            } else {
+                $campuses = $pdo->query("
+                    SELECT c.id, c.name, i.name AS inst_name
+                      FROM campuses c
+                      JOIN institutions i ON i.id = c.institution_id
+                  ORDER BY i.name, c.name
+                ")->fetchAll();
+            }
+            // Seçili kampüs seçili kuruma ait değilse temizle
+            if ($instId > 0 && $campId > 0) {
+                $ok = false;
+                foreach ($campuses as $c) { if ((int)$c['id'] === $campId) { $ok = true; break; } }
+                if (!$ok) $campId = 0;
+            }
+        }
+
         $sql = "
             SELECT ta.*, t.title AS test_title, u.full_name AS student_name, te.full_name AS teacher_name,
-                   u.campus_id AS student_campus_id
+                   u.campus_id AS student_campus_id,
+                   c.name AS campus_name, i.name AS institution_name
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
             JOIN users te ON te.id = ta.teacher_id
+            LEFT JOIN campuses c     ON c.id = u.campus_id
+            LEFT JOIN institutions i ON i.id = c.institution_id
             WHERE ta.status IN ('completed','needs_physical')";
         $params = [];
         if (!$isAdmin) {
             $sql .= " AND u.campus_id = ?";
             $params[] = (int)($me['campus_id'] ?? 0);
+        } else {
+            if ($campId > 0) {
+                $sql .= " AND u.campus_id = ?";
+                $params[] = $campId;
+            } elseif ($instId > 0) {
+                $sql .= " AND c.institution_id = ?";
+                $params[] = $instId;
+            }
         }
         $sql .= " ORDER BY ta.finished_at DESC, ta.id DESC";
-        $st = db()->prepare($sql);
+        $st = $pdo->prepare($sql);
         $st->execute($params);
-        view('teacher/results/index', ['title' => 'Raporlar', 'me' => $me, 'items' => $st->fetchAll(), 'isAdmin' => $isAdmin]);
+        view('teacher/results/index', [
+            'title'        => 'Raporlar',
+            'me'           => $me,
+            'items'        => $st->fetchAll(),
+            'isAdmin'      => $isAdmin,
+            'institutions' => $institutions,
+            'campuses'     => $campuses,
+            'filters'      => ['institution_id' => $instId, 'campus_id' => $campId],
+        ]);
     }
 
     public static function show(string $id): void {

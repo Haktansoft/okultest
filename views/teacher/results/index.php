@@ -1,4 +1,10 @@
-<?php use function App\e; $isAdmin = !empty($isAdmin) || (($me['role'] ?? '') === 'admin'); ?>
+<?php
+use function App\e;
+$isAdmin = !empty($isAdmin) || (($me['role'] ?? '') === 'admin');
+$institutions = $institutions ?? [];
+$campuses     = $campuses     ?? [];
+$filters      = $filters      ?? ['institution_id' => 0, 'campus_id' => 0];
+?>
 <div class="page-header">
   <div>
     <h1 class="page-title">Raporlar</h1>
@@ -6,11 +12,48 @@
   </div>
 </div>
 
+<?php if ($isAdmin): ?>
+<form id="reports-filter" method="get" action="/teacher/results" class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label small mb-1">Kurum</label>
+        <select name="institution_id" id="f_inst" class="form-select form-select-sm">
+          <option value="">Tüm kurumlar</option>
+          <?php foreach ($institutions as $i): ?>
+            <option value="<?= (int)$i['id'] ?>" <?= (int)$filters['institution_id'] === (int)$i['id'] ? 'selected' : '' ?>>
+              <?= e($i['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label small mb-1">Kampüs</label>
+        <select name="campus_id" id="f_camp" class="form-select form-select-sm">
+          <option value="">Tüm kampüsler</option>
+          <?php foreach ($campuses as $c): ?>
+            <option value="<?= (int)$c['id'] ?>" <?= (int)$filters['campus_id'] === (int)$c['id'] ? 'selected' : '' ?>>
+              <?= e($c['name']) ?><?= isset($c['inst_name']) ? ' — ' . e($c['inst_name']) : '' ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-12 col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrele</button>
+        <a href="/teacher/results" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i> Temizle</a>
+        <span class="ms-auto muted tiny align-self-center"><?= count($items) ?> kayıt</span>
+      </div>
+    </div>
+  </div>
+</form>
+<?php endif; ?>
+
 <div class="table-wrap">
   <table class="table align-middle">
     <thead>
       <tr>
         <th>Öğrenci</th>
+        <?php if ($isAdmin): ?><th>Kurum / Kampüs</th><?php endif; ?>
         <th>Test</th>
         <?php if ($isAdmin): ?><th>Öğretmen</th><?php endif; ?>
         <th>Durum</th>
@@ -20,11 +63,19 @@
       </tr>
     </thead>
     <tbody>
-      <?php if (!$items): ?>
-        <tr><td colspan="<?= $isAdmin ? 7 : 5 ?>"><div class="empty-state"><div class="icon"><i class="bi bi-clipboard"></i></div>Henüz tamamlanmış test yok.</div></td></tr>
+      <?php
+      $colspan = $isAdmin ? 8 : 5;
+      if (!$items): ?>
+        <tr><td colspan="<?= $colspan ?>"><div class="empty-state"><div class="icon"><i class="bi bi-clipboard"></i></div>Henüz tamamlanmış test yok.</div></td></tr>
       <?php else: foreach ($items as $i): ?>
         <tr>
           <td class="fw-semibold"><?= e($i['student_name']) ?></td>
+          <?php if ($isAdmin): ?>
+            <td class="tiny">
+              <div class="fw-semibold"><?= e($i['institution_name'] ?? '—') ?></div>
+              <div class="muted"><?= e($i['campus_name'] ?? '—') ?></div>
+            </td>
+          <?php endif; ?>
           <td><?= e($i['test_title']) ?></td>
           <?php if ($isAdmin): ?><td class="muted tiny"><?= e($i['teacher_name'] ?? '—') ?></td><?php endif; ?>
           <td>
@@ -55,3 +106,17 @@
     </tbody>
   </table>
 </div>
+
+<?php if ($isAdmin): ?>
+<script>
+(() => {
+  const inst = document.getElementById('f_inst');
+  const camp = document.getElementById('f_camp');
+  const form = document.getElementById('reports-filter');
+  inst?.addEventListener('change', () => {
+    if (camp) camp.value = '';
+    form?.submit();
+  });
+})();
+</script>
+<?php endif; ?>
