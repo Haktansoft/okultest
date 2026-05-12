@@ -211,8 +211,9 @@ class TeacherResultController {
             'totalQ'         => $totalQ,
             'totalC'         => $totalC,
             'totalP'         => $totalPct,
-            'totalLevel'     => self::olgunlukLevelLabel($totalPct),
-            'level'          => $overall,
+            'totalLevel'         => self::olgunlukLevelLabel($totalPct),
+            'totalSiniflandirma' => self::olgunlukSiniflandirma($totalPct),
+            'level'              => $overall,
             'institution_logo_path' => $data['assignment']['institution_logo_path'] ?? null,
         ], "okul-olgunluk-{$id}.pdf");
     }
@@ -223,6 +224,15 @@ class TeacherResultController {
         if ($pct >= 75) return 'İyi';
         if ($pct >= 60) return 'Geliştirilmeli';
         return 'Desteklenmeli';
+    }
+
+    private static function olgunlukSiniflandirma(int $pct): string {
+        // Alt taraftaki "Olgunluk Düzeyi Tablosu" — Olgunluk Sınıflandırması sütunu
+        if ($pct >= 90) return 'İleri Düzey Olgunluk';
+        if ($pct >= 75) return 'Yeterli Olgunluk';
+        if ($pct >= 60) return 'Sınırda Olgunluk';
+        if ($pct >= 45) return 'Düşük Olgunluk';
+        return 'Yetersiz Olgunluk';
     }
 
     private static function slug(string $s): string {

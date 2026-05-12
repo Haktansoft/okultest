@@ -201,7 +201,7 @@ function renderOlgunlukPdf(array $data, string $filename = 'okul_olgunluk.pdf'):
                 $basari = isset($data['totalP']) ? '%' . (int)$data['totalP'] : ($lvl['label'] ?? '');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cell'].'font-weight:bold;">'.htmlspecialchars($basari, ENT_QUOTES, 'UTF-8').'</div>',
                     20.06, $rowY, 23.62, 8, 'hidden');
-                $sinifLabel = (string)($data['totalLevel'] ?? ($lvl['sinif'] ?? ''));
+                $sinifLabel = (string)($data['totalSiniflandirma'] ?? ($lvl['sinif'] ?? ''));
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'font-weight:bold;">'.htmlspecialchars($sinifLabel, ENT_QUOTES, 'UTF-8').'</div>',
                     43.68, $rowY, 33.18, 8, 'hidden');
                 $mpdf->WriteFixedPosHTML('<div style="'.$S['cellsm'].'">'.htmlspecialchars($lvl['karsilik'] ?? '', ENT_QUOTES, 'UTF-8').'</div>',
