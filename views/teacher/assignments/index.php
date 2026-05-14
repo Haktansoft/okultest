@@ -138,7 +138,7 @@ $f = $filters ?? [];
             <?php if ($i['status'] === 'needs_physical'): ?>
               <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>">Kağıt-Kalem</a>
             <?php endif; ?>
-            <?php if (in_array($i['status'], ['completed','needs_physical'], true)): ?>
+            <?php if (in_array($i['status'], ['completed','needs_physical'], true) && (int)($i['phys_done'] ?? 0) > 0): ?>
               <form class="d-inline" method="post" action="/teacher/assignments/<?= (int)$i['id'] ?>/reset-physical"
                     onsubmit="return confirm('Kağıt-kalem yanıtları sıfırlansın mı?\n\nSadece fiziksel cevaplar silinir; öğretmen yeniden girebilir.')">
                 <?= csrfField() ?>

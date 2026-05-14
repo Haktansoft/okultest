@@ -54,7 +54,8 @@ class TeacherAssignmentController {
 
         $sql = "
             SELECT ta.*, t.title AS test_title, u.full_name AS student_name, u.tc AS student_tc, te.full_name AS teacher_name,
-                   u.grade_level AS student_grade, u.section AS student_section
+                   u.grade_level AS student_grade, u.section AS student_section,
+                   (SELECT COUNT(*) FROM physical_answers pa WHERE pa.assignment_id = ta.id) AS phys_done
             FROM test_assignments ta
             JOIN tests t ON t.id = ta.test_id
             JOIN users u ON u.id = ta.student_id
