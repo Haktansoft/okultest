@@ -156,6 +156,7 @@ $r->get ('/teacher/assignments/new',         ['App\\Controllers\\TeacherAssignme
 $r->post('/teacher/assignments',             ['App\\Controllers\\TeacherAssignmentController', 'create']);
 $r->post('/teacher/assignments/{id}/delete', ['App\\Controllers\\TeacherAssignmentController', 'delete']);
 $r->post('/teacher/assignments/{id}/reset',  ['App\\Controllers\\TeacherAssignmentController', 'reset']);
+$r->post('/teacher/assignments/{id}/reset-physical', ['App\\Controllers\\TeacherAssignmentController', 'resetPhysical']);
 $r->get ('/teacher/assignments/{id}/bulk',   ['App\\Controllers\\TeacherAssignmentController', 'bulkForm']);
 $r->post('/teacher/assignments/{id}/bulk',   ['App\\Controllers\\TeacherAssignmentController', 'bulkSave']);
 $r->get ('/teacher/assignments/{id}/run',    ['App\\Controllers\\TeacherAssignmentController', 'runAsStudent']);

@@ -193,6 +193,39 @@ class TeacherAssignmentController {
         redirect('/teacher/assignments');
     }
 
+    /** Sadece kağıt-kalem yanıtlarını sıfırla — öğretmen yeniden girebilsin. */
+    public static function resetPhysical(string $id): void {
+        $me = requireRole('teacher', 'admin');
+        if (!self::canTouchAssignment((int)$id, $me)) {
+            flash('err', 'Yetki yok.'); redirect('/teacher/assignments');
+        }
+        $pdo = db();
+        $st = $pdo->prepare("SELECT id FROM test_assignments WHERE id=?");
+        $st->execute([$id]);
+        if (!$st->fetchColumn()) {
+            flash('err', 'Atama bulunamadı.');
+            redirect('/teacher/assignments');
+        }
+        try {
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM physical_answers WHERE assignment_id=?")->execute([$id]);
+            $pdo->prepare("
+                UPDATE test_assignments
+                   SET status='needs_physical',
+                       finished_at=NULL,
+                       total_score=NULL
+                 WHERE id=?
+            ")->execute([$id]);
+            $pdo->commit();
+        } catch (\PDOException $ex) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            flash('err', 'Kağıt-kalem sıfırlama sırasında hata oluştu.');
+            redirect('/teacher/assignments');
+        }
+        flash('ok', 'Kağıt-kalem yanıtları sıfırlandı.');
+        redirect('/teacher/assignments');
+    }
+
     /** Öğrenci gibi çöz — testi başlatır (gerekirse) ve öğrenci runner'ına yönlendirir. */
     public static function runAsStudent(string $id): void {
         $me = requireRole('teacher', 'admin');

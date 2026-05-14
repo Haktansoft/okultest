@@ -11,7 +11,7 @@ $f = $filters ?? [];
 <div class="page-header">
   <div>
     <h1 class="page-title">Testler</h1>
-    <div class="page-sub">Hangi öğrenciye hangi test verildi. Bekleyen testler için "Toplu gir" ile yanıtları sen de girebilirsin.</div>
+    <div class="page-sub">Hangi öğrenciye hangi test verildi.</div>
   </div>
   <a href="/teacher/assignments/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Test Ata</a>
 </div>
@@ -128,9 +128,6 @@ $f = $filters ?? [];
           <td class="text-end"><?= $i['total_score'] !== null ? e($i['total_score']) : '<span class="muted">—</span>' ?></td>
           <td class="text-end">
             <?php if (in_array($i['status'], ['pending','in_progress'], true)): ?>
-              <a class="btn btn-sm btn-primary" href="/teacher/assignments/<?= (int)$i['id'] ?>/bulk" title="Toplu yanıt gir">
-                <i class="bi bi-input-cursor-text"></i> Toplu gir
-              </a>
               <a class="btn btn-sm btn-success" href="/teacher/assignments/<?= (int)$i['id'] ?>/run" title="Öğrenci ekranı gibi çözdür">
                 <i class="bi bi-play-circle"></i> Öğrenci çöz
               </a>
@@ -140,6 +137,15 @@ $f = $filters ?? [];
             <?php endif; ?>
             <?php if ($i['status'] === 'needs_physical'): ?>
               <a class="btn btn-sm btn-warning" href="/teacher/physical/<?= (int)$i['id'] ?>">Kağıt-Kalem</a>
+            <?php endif; ?>
+            <?php if (in_array($i['status'], ['completed','needs_physical'], true)): ?>
+              <form class="d-inline" method="post" action="/teacher/assignments/<?= (int)$i['id'] ?>/reset-physical"
+                    onsubmit="return confirm('Kağıt-kalem yanıtları sıfırlansın mı?\n\nSadece fiziksel cevaplar silinir; öğretmen yeniden girebilir.')">
+                <?= csrfField() ?>
+                <button class="btn btn-sm btn-outline-warning" title="Kağıt-kalem yanıtlarını sıfırla">
+                  <i class="bi bi-eraser"></i> Kağıt-kalem sıfırla
+                </button>
+              </form>
             <?php endif; ?>
             <?php if (in_array($i['status'], ['in_progress','completed','needs_physical'], true)): ?>
               <form class="d-inline" method="post" action="/teacher/assignments/<?= (int)$i['id'] ?>/reset"
