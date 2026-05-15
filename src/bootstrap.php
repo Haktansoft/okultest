@@ -110,6 +110,7 @@ $r->get ('/admin/teachers/{id}/edit',           ['App\\Controllers\\AdminTeacher
 $r->post('/admin/teachers/{id}/update',         ['App\\Controllers\\AdminTeacherController', 'update']);
 $r->post('/admin/teachers/{id}/reset',          ['App\\Controllers\\AdminTeacherController', 'reset']);
 $r->post('/admin/teachers/{id}/toggle',         ['App\\Controllers\\AdminTeacherController', 'toggle']);
+$r->post('/admin/teachers/{id}/delete',         ['App\\Controllers\\AdminTeacherController', 'delete']);
 
 // === Teacher ===
 $r->get ('/teacher', function () {

@@ -101,6 +101,10 @@
               <?= csrfField() ?>
               <button class="btn btn-sm btn-outline-secondary"><?= $i['is_active'] ? 'Pasifleştir' : 'Aktifleştir' ?></button>
             </form>
+            <form class="d-inline ms-1" method="post" action="/admin/teachers/<?= (int)$i['id'] ?>/delete" onsubmit="return confirm('<?= e($i['full_name']) ?> adlı öğretmeni silmek istediğine emin misin? Bu işlem, öğretmenin öğrenci atamalarını ve girdiği fiziksel ölçümleri de silecek.');">
+              <?= csrfField() ?>
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Sil</button>
+            </form>
           </td>
         </tr>
       <?php endforeach; endif; ?>

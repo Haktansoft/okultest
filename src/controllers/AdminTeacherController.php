@@ -143,6 +143,23 @@ class AdminTeacherController {
         redirect('/admin/teachers');
     }
 
+    public static function delete(string $id): void {
+        requireRole('admin');
+        $st = db()->prepare("SELECT id FROM users WHERE id=? AND role='teacher'");
+        $st->execute([$id]);
+        if (!$st->fetchColumn()) {
+            flash('err', 'Öğretmen bulunamadı.');
+            redirect('/admin/teachers');
+        }
+        try {
+            db()->prepare("DELETE FROM users WHERE id=? AND role='teacher'")->execute([$id]);
+            flash('ok', 'Öğretmen silindi.');
+        } catch (\PDOException $ex) {
+            flash('err', 'Öğretmen silinemedi.');
+        }
+        redirect('/admin/teachers');
+    }
+
     private static function passwordExists(string $pass, int $excludeId = 0): bool {
         $st = db()->prepare("SELECT id FROM users WHERE password = ? AND id <> ? LIMIT 1");
         $st->execute([$pass, $excludeId]);
